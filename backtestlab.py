@@ -1556,6 +1556,7 @@ class SettingsPage(QWidget):
         v.addWidget(c2)
         v.addStretch(1)
 
+import montecarlo
 
 # ===============================================================
 # 12) MAIN WINDOW
@@ -1597,6 +1598,7 @@ class MainWindow(QMainWindow):
         self.p_dash = DashboardPage(self.db)
         self.p_trades = TradesPage(self.db, icons)
         self.p_strats = StrategiesPage(self.db, icons, self._changed)
+        self.p_mc = montecarlo.MonteCarloPage(self.db, icons)
         self.p_set = SettingsPage()
 
         sidebar = QWidget()
@@ -1610,7 +1612,9 @@ class MainWindow(QMainWindow):
 
         self.navs = []
         defs = [("داشبورد", self.p_dash), ("معاملات", self.p_trades),
-                ("استراتژی‌ها", self.p_strats), ("تنظیمات", self.p_set)]
+                ("استراتژی‌ها", self.p_strats), ("مونت‌کارلو", self.p_mc),
+                ("تنظیمات", self.p_set)]
+
         for i, (label, page) in enumerate(defs):
             n = NavItem(i, label, NAV_KEYS[i], icons)
             n.clicked.connect(self.switch)
@@ -1635,10 +1639,14 @@ class MainWindow(QMainWindow):
             self.p_dash.refresh()
         elif idx == 1:
             self.p_trades.reload_strategies()
+        elif idx == 3:
+            self.p_mc.reload_strategies()
 
     def _changed(self):
         self.p_trades.reload_strategies()
+        self.p_mc.reload_strategies()
         self.p_dash.refresh()
+
 
     def showEvent(self, e):
         super().showEvent(e)
