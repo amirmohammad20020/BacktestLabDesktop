@@ -1,0 +1,16 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(filevers=(4,0,0,0), prodvers=(4,0,0,0),
+    mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0,0)),
+  kids=[
+    StringFileInfo([StringTable('040904B0', [
+        StringStruct('CompanyName',      'BacktestLab'),
+        StringStruct('FileDescription',  'Strategy Backtest Journal'),
+        StringStruct('FileVersion',      '1.0.0.0'),
+        StringStruct('InternalName',     'BacktestLab'),
+        StringStruct('LegalCopyright',   'Copyright (c) 2026'),
+        StringStruct('OriginalFilename', 'BacktestLab.exe'),
+        StringStruct('ProductName',      'BacktestLab Desktop'),
+        StringStruct('ProductVersion',   '1.0.0')])]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
