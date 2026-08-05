@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title BacktestLab Git Update
 
 echo ===========================
@@ -6,23 +7,20 @@ echo   BacktestLab Git Update
 echo ===========================
 echo.
 
-set /p message=عنوان آپديت را وارد کن: 
+set /p message=Update title: 
 
 echo.
-echo در حال آماده سازي تغييرات...
+echo Adding files...
 git add .
 
 echo.
-echo در حال ساخت Commit...
+echo Creating commit...
 git commit -m "%message%"
 
 echo.
-echo در حال ارسال به GitHub...
+echo Uploading to GitHub...
 git push
 
 echo.
-echo ===========================
-echo آپديت تمام شد
-echo ===========================
-
+echo Update finished
 pause
