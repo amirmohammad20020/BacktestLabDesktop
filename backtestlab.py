@@ -1680,6 +1680,7 @@ def main():
 
     win = MainWindow(IconRenderer(icon_fam))
     win.show()
+    import mc_ui_fix; mc_ui_fix.install()
     sys.exit(app.exec())
 
 
