@@ -5,7 +5,7 @@ BacktestLab — ماژول تحلیل مونت‌کارلو
 
 این فایل باید کنار backtestlab.py قرار بگیرد.
 """
-
+import tablekit
 import os
 import sys
 import math
@@ -1930,7 +1930,7 @@ class MonteCarloPage(QWidget):
 
     # ---------------- ابزارهای داخلی ----------------
     @staticmethod
-    def _make_table(headers, stretch=True):
+    def _make_table(headers, stretch=True, key=None):
         t = QTableWidget(0, len(headers))
         t.setHorizontalHeaderLabels(headers)
         for i in range(len(headers)):
@@ -1938,15 +1938,14 @@ class MonteCarloPage(QWidget):
             if item:
                 item.setTextAlignment(Qt.AlignCenter)
         t.setAlternatingRowColors(True)
-        t.verticalHeader().setVisible(False)
         t.setSelectionBehavior(QAbstractItemView.SelectRows)
         t.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        if stretch:
-            t.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        else:
-            t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         t.setLayoutDirection(Qt.RightToLeft)
+        # کلید ذخیره‌سازی چیدمان: از روی سربرگ‌ها ساخته می‌شود
+        tablekit.ExcelTable.attach(
+            t, key or ("mc:" + "|".join(headers))[:120], fill=stretch)
         return t
+
 
     @staticmethod
     def _wrap(widget):

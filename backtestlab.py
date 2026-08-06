@@ -6,13 +6,14 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QSize, Signal, QDate, QRectF, QPointF
 from PySide6.QtGui import (QFont, QFontDatabase, QIcon, QPixmap, QPainter,
-                           QColor, QLinearGradient, QBrush, QPen, QPainterPath)
+                           QColor, QLinearGradient, QBrush, QPen, QPainterPath,
+                           QShortcut, QKeySequence)
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
     QDateEdit, QCheckBox, QTextEdit, QTableWidget, QTableWidgetItem,
     QHeaderView, QFrame, QStackedWidget, QListWidget, QListWidgetItem,
-    QSplitter, QDialog, QScrollArea, QAbstractItemView, QSizePolicy)
+    QSplitter, QDialog, QScrollArea, QAbstractItemView, QSizePolicy, QMenu)
 
 # ===============================================================
 # 1) CONFIG
@@ -535,6 +536,16 @@ class IconRenderer:
         elif key == "check":
             p.drawPolyline([QPointF(m, s / 2), QPointF(s * .42, s - m * 1.3),
                             QPointF(s - m, m)])
+        elif key == "edit":
+            p.drawPolyline([QPointF(m, s - m),
+                            QPointF(m, s - m - w * .26),
+                            QPointF(m + w * .62, m + w * .02),
+                            QPointF(m + w * .88, m + w * .28),
+                            QPointF(m + w * .26, s - m),
+                            QPointF(m, s - m)])
+            p.drawLine(QPointF(m + w * .55, m + w * .10),
+                       QPointF(m + w * .81, m + w * .36))
+    
         else:
             p.drawEllipse(QRectF(m, m, w, w))
 
@@ -671,6 +682,19 @@ class Database:
              d["entry_price"], d["exit_price"], d["volume"], d["rr"], d["pnl"],
              d["result"], d["notes"],
              json.dumps(d["extra_data"], ensure_ascii=False)))
+        self.conn.commit()
+    def get_trade(self, tid):
+        return self.conn.execute(
+            "SELECT * FROM trades WHERE id=?", (tid,)).fetchone()
+
+    def update_trade(self, tid, d):
+        self.conn.execute("""UPDATE trades SET
+            symbol=?, direction=?, entry_date=?, entry_price=?, exit_price=?,
+            volume=?, rr=?, pnl=?, result=?, notes=?, extra_data=?
+            WHERE id=?""",
+            (d["symbol"], d["direction"], d["entry_date"], d["entry_price"],
+             d["exit_price"], d["volume"], d["rr"], d["pnl"], d["result"],
+             d["notes"], json.dumps(d["extra_data"], ensure_ascii=False), tid))
         self.conn.commit()
 
     def delete_trade(self, tid):
@@ -1081,9 +1105,15 @@ class FieldEditorDialog(BaseDialog):
 
 
 class TradeFormDialog(BaseDialog):
-    def __init__(self, db, sid, parent=None):
-        super().__init__(parent, "ثبت معامله جدید")
+    """هم برای ثبت معامله‌ی جدید و هم برای ویرایش معامله‌ی موجود."""
+
+    def __init__(self, db, sid, parent=None, trade=None):
+        editing = trade is not None
+        title = (f"ویرایش معامله  #{trade['id']}" if editing
+                 else "ثبت معامله جدید")
+        super().__init__(parent, title)
         self.db, self.sid, self.ok = db, sid, False
+        self.trade, self.editing = trade, editing
         self.resize(580, 700)
 
         scroll = QScrollArea()
@@ -1132,6 +1162,11 @@ class TradeFormDialog(BaseDialog):
                 g2.add(f["label"] + ":", w)
             iv.addWidget(g2)
 
+        if editing:
+            iv.addWidget(RLabel(
+                "با ذخیره‌ی تغییرات، مقدار قبلی این معامله بازنویسی می‌شود.",
+                size=11, color=C["text_muted"], force="rtl"))
+
         iv.addStretch(1)
         scroll.setWidget(inner)
         self.root.addWidget(scroll, 1)
@@ -1141,8 +1176,13 @@ class TradeFormDialog(BaseDialog):
             self.accept()
 
         self.buttons([("انصراف", "GhostButton", self.reject),
-                      ("ذخیره معامله", "PrimaryButton", accept)])
+                      ("ذخیره تغییرات" if editing else "ذخیره معامله",
+                       "PrimaryButton", accept)])
 
+        if editing:
+            self._load(trade)
+
+    # ---------- ساخت ویجت فیلد اختصاصی ----------
     def _widget(self, f):
         t = f["field_type"]
         if t == "dropdown":
@@ -1169,13 +1209,59 @@ class TradeFormDialog(BaseDialog):
             return date_input()
         return SLineEdit()
 
+    # ---------- پرکردن فرم در حالت ویرایش ----------
+    def _load(self, row):
+        self.symbol.setText(row["symbol"] or "")
+        i = self.direction.findData(row["direction"])
+        if i >= 0:
+            self.direction.setCurrentIndex(i)
+        d = QDate.fromString(row["entry_date"] or "", "yyyy-MM-dd")
+        if d.isValid():
+            self.date.setDate(d)
+        self.entry.setValue(float(row["entry_price"] or 0))
+        self.exit.setValue(float(row["exit_price"] or 0))
+        self.volume.setValue(float(row["volume"] or 0))
+        self.rr.setValue(float(row["rr"] or 0))
+        self.pnl.setValue(float(row["pnl"] or 0))
+        i = self.result.findData(row["result"])
+        if i >= 0:
+            self.result.setCurrentIndex(i)
+        self.notes.setPlainText(row["notes"] or "")
+        try:
+            extra = json.loads(row["extra_data"] or "{}")
+        except Exception:
+            extra = {}
+        for k, w in self.custom.items():
+            self._set_value(w, extra.get(k, ""))
+
+    @staticmethod
+    def _set_value(w, v):
+        s = "" if v is None else str(v)
+        if isinstance(w, QCheckBox):
+            w.setChecked(s.strip().lower() in ("1", "true", "بله", "yes", "on"))
+        elif isinstance(w, QComboBox):
+            i = w.findText(s)
+            w.setCurrentIndex(i if i >= 0 else 0)
+        elif isinstance(w, QDateEdit):
+            d = QDate.fromString(s, "yyyy-MM-dd")
+            if d.isValid():
+                w.setDate(d)
+        elif isinstance(w, (QSpinBox, QDoubleSpinBox)):
+            try:
+                w.setValue(float(s or 0))
+            except ValueError:
+                pass
+        elif isinstance(w, QLineEdit):
+            w.setText(s)
+
+    # ---------- خروجی ----------
     def get_data(self):
         extra = {}
         for k, w in self.custom.items():
-            if isinstance(w, QComboBox):
-                extra[k] = w.currentText()
-            elif isinstance(w, QCheckBox):
+            if isinstance(w, QCheckBox):
                 extra[k] = "1" if w.isChecked() else "0"
+            elif isinstance(w, QComboBox):
+                extra[k] = w.currentText()
             elif isinstance(w, (QSpinBox, QDoubleSpinBox)):
                 extra[k] = w.value()
             elif isinstance(w, QDateEdit):
@@ -1190,6 +1276,7 @@ class TradeFormDialog(BaseDialog):
                 "pnl": self.pnl.value(), "result": self.result.currentData(),
                 "notes": self.notes.toPlainText(), "extra_data": extra}
 
+    
 
 # ===============================================================
 # 11) PAGES
@@ -1263,7 +1350,8 @@ class DashboardPage(QWidget):
 
 
 class TradesPage(QWidget):
-    HEADERS = ["#", "نماد", "جهت", "تاریخ", "R:R", "سود/زیان", "نتیجه", "حذف"]
+    HEADERS = ["#", "نماد", "جهت", "تاریخ", "R:R", "سود/زیان", "نتیجه",
+               "ویرایش", "حذف"]
 
     def __init__(self, db, icons, parent=None):
         super().__init__(parent)
@@ -1283,7 +1371,8 @@ class TradesPage(QWidget):
         lbl = RLabel("استراتژی:", size=13, force="rtl", wrap=False)
 
         v.addWidget(PageHeader("مدیریت معاملات",
-                               "ثبت، مشاهده و فیلتر معاملات هر استراتژی",
+                               "ثبت، ویرایش و فیلتر معاملات هر استراتژی — "
+                               "برای ویرایش، روی ردیف دوبار کلیک کن.",
                                widgets=[add, self.combo, lbl]))
 
         self.fb = FilterBuilder(icons)
@@ -1301,15 +1390,30 @@ class TradesPage(QWidget):
             if it:
                 it.setTextAlignment(Qt.AlignCenter)
         self.table.setAlternatingRowColors(True)
-        self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setLayoutDirection(Qt.RightToLeft)
-        v.addWidget(self.table, 1)
+        self.table.cellDoubleClicked.connect(self._on_double_click)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._row_menu)
+        self.table.setToolTip("دوبار کلیک روی ردیف = ویرایش  |  "
+                              "کشیدن مرز ستون‌ها = تغییر عرض")
 
+        # ---- جدول اکسل‌مانند ----
+        self.grid = tablekit.ExcelTable.attach(self.table, "trades")
+        self.fitter = tablekit.fit_columns(self.table, fixed_cols=(7, 8),
+                                           fixed_width=56)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+
+
+        sc = QShortcut(QKeySequence(Qt.Key_Return), self.table)
+        sc.setContext(Qt.WidgetWithChildrenShortcut)
+        sc.activated.connect(self._edit_current)
+
+        v.addWidget(self.table, 1)
         self.reload_strategies()
 
+    # ---------- داده ----------
     def reload_strategies(self):
         prev = self.combo.currentData()
         self.combo.blockSignals(True)
@@ -1339,6 +1443,15 @@ class TradesPage(QWidget):
         self.filters = f
         self.reload_table()
 
+    @staticmethod
+    def _center_widget(w):
+        box = QWidget()
+        lay = QHBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setAlignment(Qt.AlignCenter)
+        lay.addWidget(w)
+        return box
+
     def reload_table(self):
         if self.sid is None:
             return
@@ -1347,27 +1460,94 @@ class TradesPage(QWidget):
         dfa = {"long": "خرید", "short": "فروش"}
         rfa = {"win": "برد", "loss": "باخت", "be": "سر به سر"}
         rcol = {"win": C["success"], "loss": C["danger"], "be": C["text_muted"]}
+
         for i, r in enumerate(rows):
-            self.table.setItem(i, 0, cell(r["id"], numeric=True))
+            first = cell(r["id"], numeric=True)
+            first.setData(Qt.UserRole, r["id"])
+            self.table.setItem(i, 0, first)
             self.table.setItem(i, 1, cell(r["symbol"] or "—"))
             self.table.setItem(i, 2, cell(dfa.get(r["direction"], "—")))
             self.table.setItem(i, 3, cell(r["entry_date"] or "—", numeric=True))
             self.table.setItem(i, 4, cell(f"{r['rr'] or 0:.2f}", numeric=True))
             pnl = r["pnl"] or 0
             self.table.setItem(i, 5, cell(
-                f"{pnl:,.2f}", C["success"] if pnl >= 0 else C["danger"],
+                f"{pnl:,.2f}",
+                C["success"] if pnl >= 0 else C["danger"],
                 numeric=True))
             self.table.setItem(i, 6, cell(
-                rfa.get(r["result"], "—"), rcol.get(r["result"], C["text"]),
-                numeric=False))
+                rfa.get(r["result"], "—"),
+                rcol.get(r["result"], C["text"])))
+            if r["notes"]:
+                first.setToolTip(str(r["notes"]))
+
+            for c in range(self.table.columnCount()):
+                it = self.table.item(i, c)
+                if it is not None:
+                    it.setTextAlignment(Qt.AlignCenter)
+
+            e = QPushButton()
+            e.setIcon(self.icons.icon("edit", 14, C["accent_2"]))
+            e.setToolTip("ویرایش معامله")
+            e.setCursor(Qt.PointingHandCursor)
+            e.setFixedSize(30, 26)
+            e.clicked.connect(lambda _=False, t=r["id"]: self.edit_trade(t))
+            self.table.setCellWidget(i, 7, self._center_widget(e))
+
             b = QPushButton()
             b.setObjectName("DangerButton")
             b.setIcon(self.icons.icon("trash", 14, "white"))
             b.setToolTip("حذف معامله")
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFixedSize(30, 26)
             b.clicked.connect(lambda _=False, t=r["id"]: self.delete_trade(t))
-            self.table.setCellWidget(i, 7, b)
-        self.count.setText(f"{len(rows)} معامله نمایش داده می‌شود")
+            self.table.setCellWidget(i, 8, self._center_widget(b))
 
+        self.count.setText(f"{len(rows)} معامله نمایش داده می‌شود")
+        if hasattr(self, "fitter"):
+            self.fitter.refresh()
+
+
+    # ---------- کمکی ----------
+    def _trade_id(self, row):
+        it = self.table.item(row, 0)
+        return it.data(Qt.UserRole) if it else None
+
+    def _edit_current(self):
+        row = self.table.currentRow()
+        if row >= 0:
+            tid = self._trade_id(row)
+            if tid is not None:
+                self.edit_trade(tid)
+
+    def _on_double_click(self, row, col):
+        if col >= len(self.HEADERS) - 2:      # ستون‌های دکمه‌ای
+            return
+        tid = self._trade_id(row)
+        if tid is not None:
+            self.edit_trade(tid)
+
+    def _row_menu(self, pos):
+        row = self.table.rowAt(pos.y())
+        if row < 0:
+            return
+        tid = self._trade_id(row)
+        if tid is None:
+            return
+        m = QMenu(self)
+        m.setLayoutDirection(Qt.RightToLeft)
+        a_edit = m.addAction("ویرایش معامله")
+        a_dup = m.addAction("تکثیر معامله")
+        m.addSeparator()
+        a_del = m.addAction("حذف معامله")
+        act = m.exec(self.table.viewport().mapToGlobal(pos))
+        if act is a_edit:
+            self.edit_trade(tid)
+        elif act is a_dup:
+            self.duplicate_trade(tid)
+        elif act is a_del:
+            self.delete_trade(tid)
+
+    # ---------- عملیات ----------
     def add_trade(self):
         if self.sid is None:
             msg_info(self, "استراتژی موجود نیست", "ابتدا یک استراتژی بساز.")
@@ -1378,12 +1558,40 @@ class TradesPage(QWidget):
             self.db.add_trade(d.get_data())
             self.reload_table()
 
+    def edit_trade(self, tid):
+        row = self.db.get_trade(tid)
+        if row is None:
+            msg_info(self, "پیدا نشد", "این معامله دیگر وجود ندارد.")
+            self.reload_table()
+            return
+        d = TradeFormDialog(self.db, row["strategy_id"], self, trade=row)
+        d.exec()
+        if d.ok:
+            self.db.update_trade(tid, d.get_data())
+            self.reload_table()
+
+    def duplicate_trade(self, tid):
+        r = self.db.get_trade(tid)
+        if r is None:
+            return
+        try:
+            extra = json.loads(r["extra_data"] or "{}")
+        except Exception:
+            extra = {}
+        self.db.add_trade({
+            "strategy_id": r["strategy_id"], "symbol": r["symbol"],
+            "direction": r["direction"], "entry_date": r["entry_date"],
+            "entry_price": r["entry_price"], "exit_price": r["exit_price"],
+            "volume": r["volume"], "rr": r["rr"], "pnl": r["pnl"],
+            "result": r["result"], "notes": r["notes"], "extra_data": extra})
+        self.reload_table()
+
     def delete_trade(self, tid):
         if msg_confirm(self, "حذف معامله", "این معامله برای همیشه حذف شود؟"):
             self.db.delete_trade(tid)
             self.reload_table()
 
-
+   
 class StrategiesPage(QWidget):
     TFA = {"text": "متن", "number": "عدد", "dropdown": "کشویی",
            "checkbox": "تیک‌باکس", "yesno": "بله/خیر", "date": "تاریخ"}
@@ -1556,6 +1764,7 @@ class SettingsPage(QWidget):
         v.addWidget(c2)
         v.addStretch(1)
 
+import tablekit
 import theme
 import montecarlo
 

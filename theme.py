@@ -202,6 +202,14 @@ class ThemeQSS:
     QHeaderView::section {{ background-color:{C['bg_alt']};
         color:{C['text_muted']}; padding:9px 6px; border:none;
         border-bottom:1px solid {C['border']}; font-weight:700; }}
+        QHeaderView::section:horizontal {{ border-right:1px solid {C['border_soft']}; }}
+    QHeaderView::section:vertical {{ background-color:{C['bg_alt']};
+        color:{C['text_muted']}; border:none;
+        border-left:1px solid {C['border']};
+        border-bottom:1px solid {C['border_soft']};
+        padding:0 6px; font-weight:600; }}
+    QHeaderView::section:hover {{ color:{C['text']}; }}
+    
     QTableWidget::item {{ padding:6px; }}
     QTableWidget::item:selected {{ background-color:{C['accent_soft']};
         color:{C['text']}; }}

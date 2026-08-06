@@ -596,7 +596,7 @@ def _fix_splitters(root):
 def _fix_tables(root):
     for t in root.findChildren(QTableWidget):
         try:
-            if t.property("uifix_table"):
+            if t.property("excel_table") or t.property("uifix_table"):
                 continue
             t.setProperty("uifix_table", True)
             h = t.horizontalHeader()
