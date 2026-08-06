@@ -1281,73 +1281,6 @@ class TradeFormDialog(BaseDialog):
 # ===============================================================
 # 11) PAGES
 # ===============================================================
-class DashboardPage(QWidget):
-    def __init__(self, db, parent=None):
-        super().__init__(parent)
-        self.db = db
-        v = QVBoxLayout(self)
-        v.setContentsMargins(26, 22, 26, 26)
-        v.setSpacing(18)
-        v.addWidget(PageHeader("داشبورد",
-                               "خلاصه عملکرد کلی روی تمام استراتژی‌ها"))
-
-        g1 = QGridLayout()
-        g1.setSpacing(14)
-        self.c_total = StatCard("کل معاملات", "0")
-        self.c_wr = StatCard("درصد برد", "0%", C["success"])
-        self.c_pnl = StatCard("سود / زیان خالص", "0", C["info"])
-        self.c_rr = StatCard("میانگین R:R", "0.00", C["accent_2"])
-        for i, c in enumerate([self.c_total, self.c_wr, self.c_pnl, self.c_rr]):
-            g1.addWidget(c, 0, i)
-        v.addLayout(g1)
-
-        g2 = QGridLayout()
-        g2.setSpacing(14)
-        self.c_win = StatCard("تعداد برد", "0", C["success"])
-        self.c_loss = StatCard("تعداد باخت", "0", C["danger"])
-        self.c_pf = StatCard("ضریب سود", "0.00", C["warning"])
-        self.c_str = StatCard("تعداد استراتژی‌ها", "0")
-        for i, c in enumerate([self.c_win, self.c_loss, self.c_pf, self.c_str]):
-            g2.addWidget(c, 0, i)
-        v.addLayout(g2)
-
-        guide = Card("راهنمای سریع")
-        for line in [
-            "۱) از بخش «استراتژی‌ها» فیلدهای اختصاصی خودت را بساز "
-            "(کشویی، تیک‌باکس، بله/خیر، عدد، تاریخ).",
-            "۲) در بخش «معاملات» استراتژی را انتخاب کن و معامله ثبت کن.",
-            "۳) با «فیلترهای اختصاصی» فقط همان معاملاتی را ببین که "
-            "می‌خواهی تحلیل کنی.",
-        ]:
-            guide.add(RLabel(line, size=12, color=C["text_muted"], force="rtl"))
-        v.addWidget(guide)
-        v.addStretch(1)
-
-    def refresh(self):
-        c = self.db.conn
-        q = lambda s: c.execute(s).fetchone()[0]
-        total = q("SELECT COUNT(*) FROM trades")
-        wins = q("SELECT COUNT(*) FROM trades WHERE result='win'")
-        loss = q("SELECT COUNT(*) FROM trades WHERE result='loss'")
-        pnl = q("SELECT COALESCE(SUM(pnl),0) FROM trades")
-        rr = q("SELECT COALESCE(AVG(rr),0) FROM trades")
-        gp = q("SELECT COALESCE(SUM(pnl),0) FROM trades WHERE pnl>0")
-        gl = q("SELECT COALESCE(SUM(pnl),0) FROM trades WHERE pnl<0")
-        ns = q("SELECT COUNT(*) FROM strategies")
-        wr = (wins / total * 100) if total else 0.0
-        pf = (gp / abs(gl)) if gl else 0.0
-        self.c_total.set_value(f"{total:,}")
-        self.c_wr.set_value(f"{wr:.1f}%",
-                            C["success"] if wr >= 50 else C["danger"])
-        self.c_pnl.set_value(f"{pnl:,.2f}",
-                             C["success"] if pnl >= 0 else C["danger"])
-        self.c_rr.set_value(f"{rr:.2f}", C["accent_2"])
-        self.c_win.set_value(f"{wins:,}", C["success"])
-        self.c_loss.set_value(f"{loss:,}", C["danger"])
-        self.c_pf.set_value(f"{pf:.2f}",
-                            C["success"] if pf >= 1 else C["warning"])
-        self.c_str.set_value(f"{ns:,}")
-
 
 class TradesPage(QWidget):
     HEADERS = ["#", "نماد", "جهت", "تاریخ", "R:R", "سود/زیان", "نتیجه",
@@ -1771,6 +1704,18 @@ import montecarlo
 # ===============================================================
 # 12) MAIN WINDOW
 # ===============================================================
+# ===============================================================
+# جعبه‌ابزار — پل بین برنامه‌ی اصلی و فایل‌های جدا (مثل dashboard.py)
+# ===============================================================
+class UIKit:
+    C = C
+    Card = Card
+    StatCard = StatCard
+    RLabel = RLabel
+    SComboBox = SComboBox
+    PageHeader = PageHeader
+
+
 class MainWindow(QMainWindow):
     def __init__(self, icons):
         super().__init__()
@@ -1807,7 +1752,9 @@ class MainWindow(QMainWindow):
         bh.setSpacing(0)
 
         self.pages = QStackedWidget()
-        self.p_dash = DashboardPage(self.db)
+        from dashboard import DashboardPage      # ← ایمپورت همین‌جا، نه بالای فایل
+        self.p_dash = DashboardPage(self.db, UIKit)
+
         self.p_trades = TradesPage(self.db, icons)
         self.p_strats = StrategiesPage(self.db, icons, self._changed)
         self.p_mc = montecarlo.MonteCarloPage(self.db, icons)
@@ -1856,11 +1803,14 @@ class MainWindow(QMainWindow):
             self.p_trades.reload_strategies()
         elif idx == 3:
             self.p_mc.reload_strategies()
+        if idx == 0:
+            self.p_dash.reload_strategies()
 
     def _changed(self):
         self.p_trades.reload_strategies()
         self.p_mc.reload_strategies()
         self.p_dash.refresh()
+        self.p_dash.reload_strategies()
 
 
     def showEvent(self, e):
