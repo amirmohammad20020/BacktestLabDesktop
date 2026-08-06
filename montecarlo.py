@@ -1073,7 +1073,9 @@ class MCChart(BaseChart):
             p.drawText(QRectF(4, y - 8, left - 10, 16),
                        Qt.AlignRight | Qt.AlignVCenter, f"{v:,.0f}")
 
-        thin = QPen(QColor(124, 58, 237, 42))
+        _acc = QColor(C["accent"]); _acc.setAlpha(42)
+        thin = QPen(_acc)
+
         thin.setWidthF(1.0)
         p.setPen(thin)
         for s in samples:
@@ -1093,8 +1095,10 @@ class MCChart(BaseChart):
             p.setBrush(color)
             p.drawPath(path)
 
-        area(band["p95"], band["p05"], QColor(168, 85, 247, 34))
-        area(band["p75"], band["p25"], QColor(168, 85, 247, 58))
+        _a1 = QColor(C["accent_2"]); _a1.setAlpha(34)
+        _a2 = QColor(C["accent_2"]); _a2.setAlpha(58)
+        area(band["p95"], band["p05"], _a1)
+        area(band["p75"], band["p25"], _a2)
 
         def draw_line(vals, color, width, style=Qt.SolidLine):
             pen = QPen(QColor(color))
@@ -1418,18 +1422,23 @@ class MCReport:
         s = result.summary()
         ruin = result.ruin_stats()
         rows = result.confidence_table()
-        css = """
-        body{background:#0B0F1A;color:#E6EBF5;font-family:Tahoma,Vazirmatn,
-        sans-serif;direction:rtl;padding:26px;}
-        h1{color:#A855F7;font-size:22px;} h2{color:#A855F7;font-size:16px;
-        margin-top:26px;border-bottom:1px solid #2A3548;padding-bottom:6px;}
-        table{border-collapse:collapse;width:100%;font-size:12px;margin-top:8px;}
-        th{background:#111725;color:#8A93A6;padding:8px;border:1px solid #2A3548;}
-        td{padding:6px;border:1px solid #1F2A3D;text-align:center;}
-        .g{color:#10B981;} .r{color:#EF4444;} .w{color:#F59E0B;}
-        .box{background:#1A2233;border:1px solid #2A3548;border-radius:10px;
-        padding:14px;margin-top:10px;line-height:1.9;}
+        c = C
+        css = f"""
+        body{{background:{c['bg']};color:{c['text']};font-family:Tahoma,
+        Vazirmatn,sans-serif;direction:rtl;padding:26px;}}
+        h1{{color:{c['accent_2']};font-size:22px;}}
+        h2{{color:{c['accent_2']};font-size:16px;margin-top:26px;
+        border-bottom:1px solid {c['border']};padding-bottom:6px;}}
+        table{{border-collapse:collapse;width:100%;font-size:12px;margin-top:8px;}}
+        th{{background:{c['bg_alt']};color:{c['text_muted']};padding:8px;
+        border:1px solid {c['border']};}}
+        td{{padding:6px;border:1px solid {c['border_soft']};text-align:center;}}
+        .g{{color:{c['success']};}} .r{{color:{c['danger']};}}
+        .w{{color:{c['warning']};}}
+        .box{{background:{c['surface']};border:1px solid {c['border']};
+        border-radius:10px;padding:14px;margin-top:10px;line-height:1.9;}}
         """
+
         parts = ["<!DOCTYPE html><html lang='fa' dir='rtl'><head>",
                  "<meta charset='utf-8'><title>گزارش مونت‌کارلو</title>",
                  f"<style>{css}</style></head><body>",

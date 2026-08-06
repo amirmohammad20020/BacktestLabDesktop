@@ -1556,6 +1556,7 @@ class SettingsPage(QWidget):
         v.addWidget(c2)
         v.addStretch(1)
 
+import theme
 import montecarlo
 
 # ===============================================================
@@ -1583,6 +1584,8 @@ class MainWindow(QMainWindow):
         top.setLayoutDirection(Qt.LeftToRight)
         th = QHBoxLayout(top)
         th.setContentsMargins(22, 8, 22, 8)
+        self.theme_btn = theme.ThemeButton(self)
+        th.addWidget(self.theme_btn)
         th.addStretch(1)
         th.addWidget(BrandWidget())
         root.addWidget(top)
@@ -1630,6 +1633,9 @@ class MainWindow(QMainWindow):
         root.addWidget(body, 1)
 
         self.switch(0)
+        self.theme_ctrl = theme.ThemeController.instance()
+        self.theme_ctrl.attach_window(self)
+
 
     def switch(self, idx):
         for i, n in enumerate(self.navs):
@@ -1672,7 +1678,7 @@ def main():
 
     ui_fam, icon_fam = load_fonts()
     app.setFont(QFont(ui_fam, 10))
-    app.setStyleSheet(build_qss(ui_fam))
+    theme.ThemeController.instance().start(ui_fam)
 
     ico = resource_path(os.path.join("assets", "app.ico"))
     if os.path.exists(ico):

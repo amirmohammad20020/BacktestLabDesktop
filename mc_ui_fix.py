@@ -1,53 +1,86 @@
 # -*- coding: utf-8 -*-
 """
-mc_ui_fix.py  —  نسخه 2.0
-لایه‌ی چیدمان واکنش‌گرا برای BacktestLab
+mc_ui_fix.py — نسخه 3.0
+لایه‌ی چیدمان واکنش‌گرا برای کل BacktestLab (نه فقط مونت‌کارلو)
 
-فرق نسخه 2 با نسخه 1:
-  * به هیچ کلاسی از backtestlab.py وابسته نیست (روی خود ویجت‌های Qt کار می‌کند)
-  * همیشه در ترمینال گزارش می‌دهد چه کرده  ->  دیگر شکستِ بی‌صدا نداریم
-  * صفحات را داخل ScrollArea می‌گذارد تا محتوا هرگز له نشود
+تفاوت با نسخه 2:
+  * چیدمان‌های تودرتو (addLayout) را هم می‌بیند -> کارت‌های داشبورد و مونت‌کارلو
+  * تب‌ها را با API خودِ QTabWidget امن می‌کند (نسخه 2 می‌توانست تب‌ها را پاک کند)
+  * نوار دکمه‌های سربرگ صفحات در عرض کم می‌شکند و چند ردیفه می‌شود
+  * QSplitter در عرض کم عمودی می‌شود، سایدبار جمع می‌شود (فقط آیکن)
+  * جدول‌های پرستون نوار پیمایش افقی می‌گیرند به‌جای له‌شدن
+  * پنجره‌ها و دیالوگ‌ها هرگز از نمایشگر بزرگ‌تر نمی‌شوند
+  * صفحات جدیدی که بعداً اضافه کنی خودکار پوشش داده می‌شوند
 """
-
-import sys
 
 from PySide6.QtCore import Qt, QEvent, QObject, QTimer
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QLabel, QLayout, QGridLayout, QHBoxLayout,
-    QSizePolicy, QScrollArea, QFrame, QStackedWidget, QPushButton,
-    QComboBox, QLineEdit, QAbstractSpinBox, QDateEdit, QTextEdit)
+    QApplication, QWidget, QLabel, QLayout, QBoxLayout, QGridLayout,
+    QHBoxLayout, QSizePolicy, QScrollArea, QFrame, QStackedWidget,
+    QPushButton, QComboBox, QLineEdit, QAbstractSpinBox, QDateEdit,
+    QTextEdit, QCheckBox, QSplitter, QTabWidget, QTableWidget,
+    QHeaderView, QProgressBar, QAbstractItemView)
 
 
 # ======================================================================
 # تنظیمات — فقط این‌ها را دست بزن
 # ======================================================================
-VERBOSE        = True   # چاپ گزارش در ترمینال (بعد از درست‌شدن می‌توانی False کنی)
-MARK_TITLE     = True   # افزودن [UI-Fix] به عنوان پنجره تا مطمئن شوی فعال است
-ENABLE_REFLOW  = True   # پنل‌های کنارِ هم در عرض کم زیر هم بروند
-ENABLE_FORMS   = True   # برچسب در فرم‌های باریک برود بالای فیلد
-ENABLE_LABELS  = True   # شکستن خط برچسب‌ها و حذف عرض ثابتشان
-ENABLE_SCROLL  = True   # قرار دادن صفحات داخل نوار پیمایش
+VERBOSE          = True    # گزارش در ترمینال
+MARK_TITLE       = True    # افزودن [UI-Fix] به عنوان پنجره
 
-MIN_PANEL_W    = 260    # حداقل عرض هر پنل (بزرگ‌تر = زودتر زیر هم می‌روند)
-STACK_BELOW    = 320    # زیر این عرض، برچسب می‌رود بالای فیلد
-MIN_FIELD_W    = 80     # حداقل عرض فیلدهای ورودی
+ENABLE_WINDOW    = True    # محدودکردن اندازه‌ی پنجره‌ها به نمایشگر
+ENABLE_LABELS    = True    # شکستن خط برچسب‌ها و حذف عرض ثابت
+ENABLE_SCROLL    = True    # صفحات منو داخل نوار پیمایش
+ENABLE_TABS      = True    # تب‌ها: دکمه‌ی پیمایش + محتوای اسکرول‌دار
+ENABLE_FORMS     = True    # برچسب در فرم باریک برود بالای فیلد
+ENABLE_PANELS    = True    # ردیف پنل‌ها در عرض کم زیر هم بروند
+ENABLE_CARDGRID  = True    # شبکه‌ی کارت‌های آماری واکنش‌گرا شود
+ENABLE_TOOLBARS  = True    # نوار دکمه‌های سربرگ چندردیفه شود
+ENABLE_SPLITTERS = True    # اسپلیتر افقی در عرض کم عمودی شود
+ENABLE_SIDEBAR   = True    # سایدبار در عرض کم فقط آیکن شود
+ENABLE_TABLES    = True    # جدول‌ها نوار پیمایش افقی بگیرند
+
+MIN_PANEL_W   = 260   # حداقل عرض هر پنل بزرگ (ستون‌های تنظیمات)
+MIN_CARD_W    = 205   # حداقل عرض کارت‌های آماری
+MIN_TOOL_W    = 128   # حداقل عرض دکمه/کمبوی نوار ابزار
+MIN_FIELD_W   = 78    # حداقل عرض فیلدهای ورودی
+STACK_BELOW   = 330   # زیر این عرض، برچسب می‌رود بالای فیلد
+SPLIT_BELOW   = 760   # زیر این عرض، اسپلیتر عمودی می‌شود
+SIDEBAR_BELOW = 1040  # زیر این عرضِ پنجره، سایدبار جمع می‌شود
+SIDEBAR_MINI  = 62
 HSPACE, VSPACE = 12, 12
 
+WATCH_MS = 1200       # هر چند میلی‌ثانیه دنبال صفحه‌ی جدید بگردد
 
-_stats = {"forms": 0, "rows": 0, "scroll": 0, "labels": 0, "fields": 0}
+
+_stats = {"forms": 0, "panels": 0, "cards": 0, "tools": 0, "scroll": 0,
+          "tabs": 0, "split": 0, "tables": 0, "labels": 0, "fields": 0}
 
 
 def _log(*a):
     if VERBOSE:
-        print("[mc_ui_fix]", *a)
+        print("[ui-fix]", *a)
+
+
+def _alive(o):
+    try:
+        o.objectName()
+        return True
+    except Exception:
+        return False
 
 
 def _is_field(w):
     return isinstance(w, (QComboBox, QAbstractSpinBox, QLineEdit, QDateEdit))
 
 
+def _is_tool(w):
+    return isinstance(w, (QPushButton, QComboBox, QLineEdit, QAbstractSpinBox,
+                          QDateEdit, QCheckBox, QLabel, QProgressBar))
+
+
 # ======================================================================
-# 1) ضریب مقیاس بر اساس اندازه‌ی نمایشگر
+# 1) ضریب مقیاس بر اساس نمایشگر
 # ======================================================================
 _SCALE = None
 
@@ -70,22 +103,166 @@ def scale():
         _SCALE = 0.92
     else:
         _SCALE = 1.00
-    _log("اندازه‌ی نمایشگر:", w, "x", h, "| ضریب:", _SCALE)
+    _log("نمایشگر:", w, "x", h, "| ضریب:", _SCALE)
     return _SCALE
 
 
 # ======================================================================
-# 2) اصلاح برچسب‌ها و فیلدها
+# 2) پیمایش همه‌ی چیدمان‌ها (حتی تودرتوها که صاحب ویجت ندارند)
+# ======================================================================
+def _iter_layouts(root):
+    out, seen = [], set()
+    widgets = [root] + root.findChildren(QWidget)
+    for w in widgets:
+        if not _alive(w):
+            continue
+        lay = w.layout()
+        if lay is None:
+            continue
+        stack = [lay]
+        while stack:
+            L = stack.pop()
+            if id(L) in seen:
+                continue
+            seen.add(id(L))
+            out.append((w, L))
+            for i in range(L.count()):
+                it = L.itemAt(i)
+                if it is None:
+                    continue
+                sub = it.layout()
+                if sub is not None:
+                    stack.append(sub)
+    return out
+
+
+# ======================================================================
+# 3) موتور «جریان» — چیدن n ستونه بر اساس عرض موجود
+# ======================================================================
+class _Flow(QObject):
+    def __init__(self, owner, grid, items, unit, keep_spacers=False):
+        super().__init__(owner)
+        self.owner, self.grid, self.items = owner, grid, items
+        self.unit, self.keep = max(60, int(unit)), keep_spacers
+        self.cols = -1
+        owner.installEventFilter(self)
+        QTimer.singleShot(0, self.apply)
+
+    def _widgets(self):
+        return [w for k, w in self.items if k == "w" and _alive(w)]
+
+    def eventFilter(self, obj, ev):
+        if obj is self.owner and ev.type() == QEvent.Resize:
+            self.apply()
+        return False
+
+    def apply(self):
+        try:
+            if not _alive(self.grid) or not _alive(self.owner):
+                return
+            ws = self._widgets()
+            if len(ws) < 2:
+                return
+            avail = max(1, self.owner.contentsRect().width())
+            n = int((avail + HSPACE) // (self.unit + HSPACE))
+            n = max(1, min(len(ws), n))
+            if n == self.cols:
+                return
+            self.cols = n
+            g = self.grid
+            while g.count():
+                g.takeAt(0)
+            for c in range(g.columnCount() + 2):
+                g.setColumnStretch(c, 0)
+
+            if self.keep and n >= len(ws):
+                col = 0
+                for kind, w in self.items:
+                    if kind == "s":
+                        g.setColumnStretch(col, 1)
+                        col += 1
+                    elif _alive(w):
+                        g.addWidget(w, 0, col)
+                        col += 1
+            else:
+                for i, w in enumerate(ws):
+                    g.addWidget(w, i // n, i % n)
+                for c in range(n):
+                    g.setColumnStretch(c, 1)
+        except Exception as e:
+            _log("flow:", e)
+
+
+def _box_items(box):
+    """آیتم‌های یک BoxLayout را برمی‌گرداند؛ اگر چیدمان تودرتو داشت None."""
+    items = []
+    for i in range(box.count()):
+        it = box.itemAt(i)
+        if it is None:
+            continue
+        w = it.widget()
+        if w is not None:
+            items.append(("w", w))
+        elif it.layout() is not None:
+            return None
+        elif it.spacerItem() is not None:
+            items.append(("s", None))
+    return items
+
+
+def _to_grid(owner, box, items):
+    """box را با یک QGridLayout در همان جایگاه جایگزین می‌کند."""
+    margins = box.contentsMargins()
+    parent = box.parent()
+    grid = QGridLayout()
+    grid.setContentsMargins(margins)
+    grid.setHorizontalSpacing(HSPACE)
+    grid.setVerticalSpacing(VSPACE)
+    grid.setProperty("uifix_done", True)
+
+    while box.count():
+        box.takeAt(0)
+
+    if isinstance(parent, QWidget) and parent.layout() is box:
+        tmp = QWidget()
+        tmp.setLayout(box)          # چیدمان قدیمی را از ویجت جدا می‌کند
+        tmp.deleteLater()
+        parent.setLayout(grid)
+        return grid
+
+    if isinstance(parent, QBoxLayout):
+        idx = -1
+        for i in range(parent.count()):
+            it = parent.itemAt(i)
+            if it is not None and it.layout() is box:
+                idx = i
+                break
+        if idx < 0:
+            return None
+        stretch = parent.stretch(idx)
+        parent.takeAt(idx)
+        box.setParent(None)
+        box.deleteLater()
+        parent.insertLayout(idx, grid, stretch)
+        return grid
+    return None
+
+
+# ======================================================================
+# 4) برچسب‌ها، فیلدها، ارتفاع‌های سفت
 # ======================================================================
 def _fix_atoms(root):
     s = scale()
     for w in root.findChildren(QWidget):
         try:
-            if w.property("uifix_atom"):
+            if not _alive(w) or w.property("uifix_atom"):
                 continue
+            w.setProperty("uifix_atom", True)
 
             if ENABLE_LABELS and isinstance(w, QLabel):
-                w.setProperty("uifix_atom", True)
+                pm = w.pixmap()
+                if pm is not None and not pm.isNull():
+                    continue                       # آیکن — دست نزن
                 w.setMinimumWidth(0)
                 if w.maximumWidth() < 4000:
                     w.setMaximumWidth(16777215)
@@ -94,50 +271,46 @@ def _fix_atoms(root):
                 _stats["labels"] += 1
 
             elif _is_field(w):
-                w.setProperty("uifix_atom", True)
                 w.setMinimumWidth(int(MIN_FIELD_W * s))
                 w.setMaximumWidth(16777215)
                 w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 _stats["fields"] += 1
+
+            mh = w.minimumHeight()
+            if mh > 220 and s < 1.0:
+                w.setMinimumHeight(max(170, int(mh * s)))
         except Exception as e:
             _log("atom:", e)
 
 
 # ======================================================================
-# 3) فرم‌های واکنش‌گرا  (برچسب کنار فیلد  ->  برچسب بالای فیلد)
+# 5) فرم‌ها: برچسب کنارِ فیلد -> برچسب بالای فیلد
 # ======================================================================
-class _FormReflow(QObject):
-    """روی هر QGridLayout که ردیف‌های «برچسب + فیلد» دارد نصب می‌شود."""
-
+class _FormFlow(QObject):
     def __init__(self, owner, grid):
         super().__init__(owner)
-        self.owner, self.grid = owner, grid
-        self.state = None
+        self.owner, self.grid, self.state = owner, grid, None
         self.items = []
-        if not self._capture():
+        if not self.capture():
             self.items = None
             return
         owner.installEventFilter(self)
         QTimer.singleShot(0, self.apply)
 
-    def _capture(self):
+    def capture(self):
         g = self.grid
-        items = []
+        items, rows = [], {}
         for i in range(g.count()):
             it = g.itemAt(i)
             if it is None:
                 continue
             w = it.widget()
-            if w is None:                      # اسپیسر یا چیدمان تو در تو -> رها کن
+            if w is None:
                 return False
             r, c, rs, cs = g.getItemPosition(i)
             items.append([r, c, rs, cs, w])
-        if len(items) < 2:
-            return False
-        rows = {}
-        for r, c, rs, cs, w in items:
             rows.setdefault(r, []).append(w)
-        if not any(len(v) >= 2 for v in rows.values()):
+        if len(items) < 2 or not any(len(v) >= 2 for v in rows.values()):
             return False
         self.items = items
         return True
@@ -147,30 +320,27 @@ class _FormReflow(QObject):
             self.apply()
         return False
 
-    def _clear(self):
-        g = self.grid
-        while g.count():
-            g.takeAt(0)
-
     def apply(self):
         if not self.items:
             return
         try:
+            if not _alive(self.grid) or not _alive(self.owner):
+                return
             w = self.owner.width()
             if w <= 1:
                 return
             want = "narrow" if w < int(STACK_BELOW * scale()) else "wide"
-
             if want == "wide" and self.state in (None, "wide"):
                 if self.grid.count() != len(self.items):
-                    self._capture()          # فرم بعداً ردیف اضافه کرده
+                    self.capture()
                 self.state = "wide"
                 return
             if want == self.state:
                 return
 
             g = self.grid
-            self._clear()
+            while g.count():
+                g.takeAt(0)
 
             if want == "narrow":
                 rows = {}
@@ -178,123 +348,32 @@ class _FormReflow(QObject):
                     rows.setdefault(r, []).append((c, wid))
                 line = 0
                 for r in sorted(rows):
-                    group = rows[r]
-                    # برچسب‌ها اول، بعد فیلدها (مستقل از راست‌چین/چپ‌چین)
-                    group.sort(key=lambda t: (0 if isinstance(t[1], QLabel) else 1, t[0]))
-                    for _c, wid in group:
-                        g.addWidget(wid, line, 0, 1, 2)
-                        line += 1
-                g.setColumnStretch(0, 1)
-                g.setColumnStretch(1, 0)
+                    grp = sorted(rows[r],
+                                 key=lambda t: (0 if isinstance(t[1], QLabel)
+                                                else 1, t[0]))
+                    for _c, wid in grp:
+                        if _alive(wid):
+                            g.addWidget(wid, line, 0, 1, 2)
+                            line += 1
             else:
                 for r, c, rs, cs, wid in self.items:
-                    g.addWidget(wid, r, c, rs, cs)
-                g.setColumnStretch(0, 1)
-                g.setColumnStretch(1, 0)
-
+                    if _alive(wid):
+                        g.addWidget(wid, r, c, rs, cs)
+            g.setColumnStretch(0, 1)
+            g.setColumnStretch(1, 0)
             self.state = want
         except Exception as e:
             _log("form:", e)
 
 
-def _fix_forms(root):
-    for w in root.findChildren(QWidget):
-        try:
-            if w.property("uifix_form"):
-                continue
-            g = w.layout()
-            if not isinstance(g, QGridLayout):
-                continue
-            if w.findChild(QStackedWidget) is not None:
-                continue
-            has_label = any(
-                isinstance(g.itemAt(i).widget(), QLabel) for i in range(g.count())
-                if g.itemAt(i) is not None)
-            has_field = any(
-                _is_field(g.itemAt(i).widget()) for i in range(g.count())
-                if g.itemAt(i) is not None)
-            if not (has_label and has_field):
-                continue
-            w.setProperty("uifix_form", True)
-            fr = _FormReflow(w, g)
-            if fr.items:
-                _stats["forms"] += 1
-        except Exception as e:
-            _log("forms:", e)
-
-
 # ======================================================================
-# 4) ردیف پنل‌ها  ->  شبکه‌ی خودکار
+# 6) شناسایی نوع چیدمان‌ها و اعمال قواعد
 # ======================================================================
-class _RowReflow(QObject):
-    def __init__(self, container, panels):
-        super().__init__(container)
-        self.c, self.panels, self.cols = container, panels, 0
-        container.installEventFilter(self)
-        QTimer.singleShot(0, self.apply)
-
-    def eventFilter(self, obj, ev):
-        if obj is self.c and ev.type() == QEvent.Resize:
-            self.apply()
-        return False
-
-    def apply(self):
-        try:
-            g = self.c.layout()
-            if not isinstance(g, QGridLayout):
-                return
-            unit = int(MIN_PANEL_W * scale()) + HSPACE
-            avail = max(1, self.c.width()) + HSPACE
-            n = max(1, min(len(self.panels), int(avail // unit)))
-            if n == self.cols:
-                return
-            self.cols = n
-            while g.count():
-                g.takeAt(0)
-            for i, p in enumerate(self.panels):
-                g.addWidget(p, i // n, i % n)
-            for col in range(max(g.columnCount(), n)):
-                g.setColumnStretch(col, 1 if col < n else 0)
-            _log("بازچینش ردیف ->", n, "ستون")
-        except Exception as e:
-            _log("row apply:", e)
-
-
-def _convert_row(container, panels):
-    old = container.layout()
-    if old is None:
-        return False
-    margins = old.contentsMargins()
-    while old.count():
-        old.takeAt(0)
-    tmp = QWidget()
-    tmp.setLayout(old)
-    tmp.deleteLater()
-
-    g = QGridLayout(container)
-    g.setContentsMargins(margins)
-    g.setHorizontalSpacing(HSPACE)
-    g.setVerticalSpacing(VSPACE)
-
-    s = scale()
-    for p in panels:
-        p.setParent(container)
-        p.setMinimumWidth(int(MIN_PANEL_W * s))
-        p.setSizePolicy(QSizePolicy.Preferred, p.sizePolicy().verticalPolicy())
-        p.show()
-
-    _RowReflow(container, panels)
-    return True
-
-
-def _looks_like_panel(w):
-    """پنل = ویجتی که خودش چیدمان و چند فرزند دارد یا نسبتاً پهن است."""
+def _looks_panel(w):
     try:
-        if w is None or not w.isWidgetType() or w.isHidden():
+        if not _alive(w) or w.isHidden():
             return False
-        if isinstance(w, (QPushButton, QLabel, QScrollArea, QStackedWidget)):
-            return False
-        if w.findChild(QStackedWidget) is not None:
+        if isinstance(w, (QPushButton, QLabel, QCheckBox, QStackedWidget)):
             return False
         lay = w.layout()
         if lay is not None and lay.count() >= 2:
@@ -304,105 +383,332 @@ def _looks_like_panel(w):
         return False
 
 
-def _fix_rows(root):
-    for w in root.findChildren(QWidget):
+def _fix_layouts(root):
+    s = scale()
+    for owner, lay in _iter_layouts(root):
         try:
-            if w.property("uifix_row"):
+            if not _alive(lay) or not _alive(owner):
                 continue
-            lay = w.layout()
+            if lay.property("uifix_done"):
+                continue
+
+            # ---- الف) فرم برچسب+فیلد ----
+            if isinstance(lay, QGridLayout):
+                has_lbl = has_fld = False
+                only_widgets = True
+                kids = []
+                for i in range(lay.count()):
+                    it = lay.itemAt(i)
+                    if it is None:
+                        continue
+                    w = it.widget()
+                    if w is None:
+                        only_widgets = False
+                        continue
+                    kids.append(w)
+                    if isinstance(w, QLabel):
+                        has_lbl = True
+                    if _is_field(w) or isinstance(w, QCheckBox):
+                        has_fld = True
+
+                if has_lbl and has_fld and ENABLE_FORMS:
+                    lay.setProperty("uifix_done", True)
+                    host = lay.parentWidget() or owner
+                    if _FormFlow(host, lay).items:
+                        _stats["forms"] += 1
+                    continue
+
+                # ---- ب) شبکه‌ی کارت‌ها ----
+                if (ENABLE_CARDGRID and only_widgets and len(kids) >= 2
+                        and not has_lbl and not has_fld):
+                    lay.setProperty("uifix_done", True)
+                    for k in kids:
+                        k.setMinimumWidth(int(MIN_CARD_W * s))
+                        k.setSizePolicy(QSizePolicy.Preferred,
+                                        k.sizePolicy().verticalPolicy())
+                    _Flow(owner, lay, [("w", k) for k in kids],
+                          int(MIN_CARD_W * s))
+                    _stats["cards"] += 1
+                continue
+
+            # ---- ج) ردیف افقی ----
             if not isinstance(lay, QHBoxLayout):
                 continue
-            kids = []
-            ok = True
-            for i in range(lay.count()):
-                it = lay.itemAt(i)
-                if it is None:
-                    continue
-                kw = it.widget()
-                if kw is None:
-                    if it.spacerItem() is not None:
-                        continue
-                    ok = False
-                    break
-                kids.append(kw)
-            if not ok or len(kids) < 2:
+            items = _box_items(lay)
+            if items is None:
                 continue
-            if any(isinstance(k, QPushButton) for k in kids):
-                continue          # ردیف دکمه‌ها را دست نزن
-            if not all(_looks_like_panel(k) for k in kids):
+            kids = [w for k, w in items if k == "w"]
+            if len(kids) < 2:
                 continue
-            need = len(kids) * int(MIN_PANEL_W * scale())
-            if need <= w.width():
-                # الان جا دارد، ولی باز هم واکنش‌گرا می‌کنیم تا موقع کوچک‌شدن آماده باشد
-                pass
-            w.setProperty("uifix_row", True)
-            if _convert_row(w, kids):
-                _stats["rows"] += 1
+
+            if ENABLE_PANELS and all(_looks_panel(k) for k in kids):
+                lay.setProperty("uifix_done", True)
+                grid = _to_grid(owner, lay, items)
+                if grid is not None:
+                    host = grid.parentWidget() or owner
+                    for k in kids:
+                        k.setMinimumWidth(int(MIN_PANEL_W * s))
+                        k.setSizePolicy(QSizePolicy.Preferred,
+                                        k.sizePolicy().verticalPolicy())
+                        k.show()
+                    _Flow(host, grid, items, int(MIN_PANEL_W * s))
+                    _stats["panels"] += 1
+                continue
+
+            if (ENABLE_TOOLBARS and len(kids) >= 3
+                    and all(_is_tool(k) for k in kids)):
+                unit = MIN_TOOL_W
+                for k in kids:
+                    unit = max(unit, min(250, k.sizeHint().width()))
+                lay.setProperty("uifix_done", True)
+                grid = _to_grid(owner, lay, items)
+                if grid is not None:
+                    host = grid.parentWidget() or owner
+                    for k in kids:
+                        k.show()
+                    _Flow(host, grid, items, int(unit * s), keep_spacers=True)
+                    _stats["tools"] += 1
         except Exception as e:
-            _log("rows:", e)
+            _log("layout:", e)
 
 
 # ======================================================================
-# 5) صفحات داخل نوار پیمایش
+# 7) نوار پیمایش برای صفحات و تب‌ها
 # ======================================================================
-def _fix_scroll(root):
+def _needs_scroll(page):
+    lay = page.layout()
+    if lay is None:
+        return False
+    if lay.count() == 1:
+        w = lay.itemAt(0).widget()
+        if isinstance(w, (QTableWidget, QScrollArea)):
+            return False
+        if (w is not None and w.layout() is None
+                and w.sizePolicy().verticalPolicy() == QSizePolicy.Expanding):
+            return False          # نمودارِ تک — خودش کش می‌آید
+    return True
+
+
+def _wrap(page):
+    sa = QScrollArea()
+    sa.setWidgetResizable(True)
+    sa.setFrameShape(QFrame.NoFrame)
+    sa.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    sa.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    sa.setWidget(page)
+    page.show()
+    return sa
+
+
+def _fix_stacks(root):
     for st in root.findChildren(QStackedWidget):
         try:
             if st.property("uifix_scroll"):
                 continue
+            if isinstance(st.parentWidget(), QTabWidget):
+                continue          # تب‌ها را با API خودشان می‌گیریم (امن)
             st.setProperty("uifix_scroll", True)
             cur = st.currentIndex()
             for i in range(st.count()):
                 page = st.widget(i)
                 if page is None or isinstance(page, QScrollArea):
                     continue
+                if not _needs_scroll(page):
+                    continue
                 st.removeWidget(page)
-                sa = QScrollArea()
-                sa.setWidgetResizable(True)
-                sa.setFrameShape(QFrame.NoFrame)
-                sa.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-                sa.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-                sa.setWidget(page)
-                page.show()
-                st.insertWidget(i, sa)
+                st.insertWidget(i, _wrap(page))
                 _stats["scroll"] += 1
             st.setCurrentIndex(cur)
         except Exception as e:
-            _log("scroll:", e)
+            _log("stack:", e)
+
+
+def _fix_tabs(root):
+    for tw in root.findChildren(QTabWidget):
+        try:
+            tw.setUsesScrollButtons(True)
+            tw.setElideMode(Qt.ElideRight)
+            tw.tabBar().setExpanding(False)
+            if tw.property("uifix_tabs"):
+                continue
+            tw.setProperty("uifix_tabs", True)
+            cur = tw.currentIndex()
+            for i in range(tw.count()):
+                page = tw.widget(i)
+                if page is None or isinstance(page, QScrollArea):
+                    continue
+                if not _needs_scroll(page):
+                    continue
+                text, icon = tw.tabText(i), tw.tabIcon(i)
+                tip = tw.tabToolTip(i)
+                tw.removeTab(i)
+                tw.insertTab(i, _wrap(page), icon, text)
+                tw.setTabToolTip(i, tip)
+                _stats["tabs"] += 1
+            tw.setCurrentIndex(cur)
+        except Exception as e:
+            _log("tabs:", e)
 
 
 # ======================================================================
-# 6) اجرای همه‌ی اصلاحات روی یک پنجره
+# 8) اسپلیتر / جدول / سایدبار / پنجره
+# ======================================================================
+class _SplitFlow(QObject):
+    def __init__(self, sp):
+        super().__init__(sp)
+        self.sp, self.state = sp, None
+        sp.installEventFilter(self)
+        QTimer.singleShot(0, self.apply)
+
+    def eventFilter(self, obj, ev):
+        if obj is self.sp and ev.type() == QEvent.Resize:
+            self.apply()
+        return False
+
+    def apply(self):
+        try:
+            if not _alive(self.sp):
+                return
+            want = ("v" if self.sp.width() < int(SPLIT_BELOW * scale())
+                    else "h")
+            if want == self.state:
+                return
+            self.state = want
+            self.sp.setOrientation(Qt.Vertical if want == "v" else Qt.Horizontal)
+        except Exception as e:
+            _log("split:", e)
+
+
+def _fix_splitters(root):
+    for sp in root.findChildren(QSplitter):
+        try:
+            if sp.property("uifix_split"):
+                continue
+            sp.setProperty("uifix_split", True)
+            sp.setChildrenCollapsible(False)
+            if sp.orientation() == Qt.Horizontal:
+                _SplitFlow(sp)
+                _stats["split"] += 1
+        except Exception as e:
+            _log("splitter:", e)
+
+
+def _fix_tables(root):
+    for t in root.findChildren(QTableWidget):
+        try:
+            if t.property("uifix_table"):
+                continue
+            t.setProperty("uifix_table", True)
+            h = t.horizontalHeader()
+            h.setMinimumSectionSize(56)
+            t.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+            t.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+            t.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            if t.columnCount() > 7:
+                h.setSectionResizeMode(QHeaderView.Interactive)
+                h.setStretchLastSection(True)
+                t.resizeColumnsToContents()
+            t.setSizePolicy(QSizePolicy.Expanding,
+                            t.sizePolicy().verticalPolicy())
+            _stats["tables"] += 1
+        except Exception as e:
+            _log("table:", e)
+
+
+class _SidebarFlow(QObject):
+    def __init__(self, win, bar):
+        super().__init__(win)
+        self.win, self.bar, self.state = win, bar, None
+        self.full = max(bar.width(), bar.minimumWidth(), 200)
+        win.installEventFilter(self)
+        QTimer.singleShot(0, self.apply)
+
+    def eventFilter(self, obj, ev):
+        if obj is self.win and ev.type() == QEvent.Resize:
+            self.apply()
+        return False
+
+    def apply(self):
+        try:
+            if not _alive(self.win) or not _alive(self.bar):
+                return
+            want = ("mini" if self.win.width() < int(SIDEBAR_BELOW * scale())
+                    else "full")
+            if want == self.state:
+                return
+            self.state = want
+            self.bar.setFixedWidth(SIDEBAR_MINI if want == "mini" else self.full)
+            for lb in self.bar.findChildren(QLabel):
+                pm = lb.pixmap()
+                if pm is not None and not pm.isNull():
+                    continue
+                lb.setVisible(want == "full")
+        except Exception as e:
+            _log("sidebar:", e)
+
+
+def _fix_sidebar(win):
+    if win.property("uifix_sidebar"):
+        return
+    for w in win.findChildren(QWidget):
+        if "sidebar" in (w.objectName() or "").lower():
+            win.setProperty("uifix_sidebar", True)
+            _SidebarFlow(win, w)
+            _log("سایدبار واکنش‌گرا شد.")
+            return
+
+
+def _fix_window(win):
+    try:
+        app = QApplication.instance()
+        g = app.primaryScreen().availableGeometry()
+        mw, mh = int(g.width() * 0.98), int(g.height() * 0.94)
+        if win.minimumWidth() > mw - 40:
+            win.setMinimumWidth(max(620, mw - 40))
+        if win.minimumHeight() > mh - 40:
+            win.setMinimumHeight(max(440, mh - 40))
+        if win.minimumWidth() > 900:
+            win.setMinimumWidth(900)
+        if win.minimumHeight() > 560:
+            win.setMinimumHeight(560)
+        if win.width() > mw or win.height() > mh:
+            win.resize(min(win.width(), mw), min(win.height(), mh))
+        if MARK_TITLE and win.windowTitle() and "[UI-Fix]" not in win.windowTitle():
+            win.setWindowTitle(win.windowTitle() + "  [UI-Fix]")
+    except Exception as e:
+        _log("window:", e)
+
+
+# ======================================================================
+# 9) اعمال روی یک پنجره
 # ======================================================================
 def apply_to(root):
-    try:
-        if root.isWindow():
-            if root.minimumWidth() > 900:
-                root.setMinimumWidth(900)
-            if root.minimumHeight() > 560:
-                root.setMinimumHeight(560)
-            if MARK_TITLE and "[UI-Fix]" not in root.windowTitle():
-                root.setWindowTitle(root.windowTitle() + "  [UI-Fix]")
-    except Exception:
-        pass
-
+    if not _alive(root):
+        return
+    if ENABLE_WINDOW and root.isWindow():
+        _fix_window(root)
     _fix_atoms(root)
+    if ENABLE_TABLES:
+        _fix_tables(root)
     if ENABLE_SCROLL:
-        _fix_scroll(root)
-    if ENABLE_FORMS:
-        _fix_forms(root)
-    if ENABLE_REFLOW:
-        _fix_rows(root)
+        _fix_stacks(root)
+    if ENABLE_TABS:
+        _fix_tabs(root)
+    if ENABLE_SPLITTERS:
+        _fix_splitters(root)
+    _fix_layouts(root)
+    if ENABLE_SIDEBAR and root.isWindow():
+        _fix_sidebar(root)
 
 
 # ======================================================================
-# 7) دیده‌بان
+# 10) دیده‌بان — صفحات جدید را هم می‌گیرد
 # ======================================================================
 class _Watcher(QObject):
     def __init__(self):
         super().__init__()
         self._pending = False
-        self._runs = 0
+        self._sig = -1
 
     def eventFilter(self, obj, ev):
         if ev.type() in (QEvent.Show, QEvent.Polish, QEvent.WindowActivate):
@@ -413,11 +719,25 @@ class _Watcher(QObject):
         if self._pending:
             return
         self._pending = True
-        QTimer.singleShot(120, self.run)
+        QTimer.singleShot(140, self.run)
+
+    def signature(self):
+        n = 0
+        for w in QApplication.topLevelWidgets():
+            try:
+                if w.isVisible():
+                    n += len(w.findChildren(QWidget))
+            except Exception:
+                pass
+        return n
+
+    def poll(self):
+        sig = self.signature()
+        if sig != self._sig:
+            self.schedule()
 
     def run(self):
         self._pending = False
-        self._runs += 1
         before = dict(_stats)
         for w in QApplication.topLevelWidgets():
             try:
@@ -425,33 +745,44 @@ class _Watcher(QObject):
                     apply_to(w)
             except Exception as e:
                 _log("run:", e)
+        self._sig = self.signature()
         if _stats != before:
-            _log("گزارش:", "فرم=%d" % _stats["forms"],
-                 "ردیف=%d" % _stats["rows"],
-                 "صفحه=%d" % _stats["scroll"],
-                 "برچسب=%d" % _stats["labels"],
-                 "فیلد=%d" % _stats["fields"])
+            _log("گزارش:",
+                 "فرم=%d" % _stats["forms"], "پنل=%d" % _stats["panels"],
+                 "کارت=%d" % _stats["cards"], "نوارابزار=%d" % _stats["tools"],
+                 "صفحه=%d" % _stats["scroll"], "تب=%d" % _stats["tabs"],
+                 "اسپلیتر=%d" % _stats["split"], "جدول=%d" % _stats["tables"],
+                 "برچسب=%d" % _stats["labels"], "فیلد=%d" % _stats["fields"])
 
 
 _watcher = None
+_timer = None
 _installed = False
 
 
+def refresh():
+    """اگر صفحه‌ای را دستی ساختی و می‌خواهی فوراً اصلاح شود."""
+    if _watcher:
+        _watcher.schedule()
+
+
 def install():
-    """تنها تابعی که باید صدا بزنی. باید بعد از ساخت QApplication اجرا شود."""
-    global _watcher, _installed
+    """بعد از ساخت QApplication صدا بزن."""
+    global _watcher, _timer, _installed
     if _installed:
-        _log("قبلاً نصب شده بود.")
         return True
     app = QApplication.instance()
     if app is None:
-        print("[mc_ui_fix] هشدار: هنوز QApplication ساخته نشده؛ "
-              "install() را بعد از ساخت اپلیکیشن صدا بزن.")
+        print("[ui-fix] هشدار: هنوز QApplication ساخته نشده است.")
         return False
     _installed = True
     _watcher = _Watcher()
     app.installEventFilter(_watcher)
     _watcher.schedule()
-    QTimer.singleShot(600, _watcher.schedule)    # یک بار دیگر بعد از ساخت کامل UI
-    _log("نصب شد ✔  (نسخه 2.0)")
+    QTimer.singleShot(700, _watcher.schedule)
+    _timer = QTimer()
+    _timer.setInterval(WATCH_MS)
+    _timer.timeout.connect(_watcher.poll)
+    _timer.start()
+    _log("نصب شد ✔ (نسخه 3.0)")
     return True
