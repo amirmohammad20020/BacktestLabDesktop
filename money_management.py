@@ -453,17 +453,325 @@ class WithdrawManager(MoneyManager):
         if state.equity >= target:
             state.withdraw((state.equity - self.mark) * self.p("take") / 100.0)
             self.mark = state.equity
+# ===============================================================
+# ۳-ب) سیستم‌های پیشرفت کازینویی — نسخه‌ی مهارشده
+# ویژگی مشترک همه: بیشترین ضرر ممکن از پیش معلوم است.
+# نکته‌ی کلیدی: ضریب لازم برای جبران = ۱ + ۱÷R
+# یعنی با R:R برابر ۲، ضریب ۱٫۵ کافی است و نه ۲.
+# ===============================================================
+class ParoliManager(MoneyManager):
+    KEY, TITLE = "paroli", "پارولی (نردبان کوتاه برد)"
+    DESC = ("بعد از هر برد یک پله بالا می‌روی و در انتهای نردبان، چه ببری چه ببازی، "
+            "به پایه برمی‌گردی. چون نردبان روی بردهای قبلی ساخته شده، بدترین حالتش "
+            "سودِ رگه را می‌خورد نه سرمایه را.")
+    PARAMS = [("steps", "طول نردبان", 2, 6, 3, 1, 0),
+              ("mult", "ضریب هر پله", 1.2, 3.0, 2.0, 0.1, 2)]
+
+    def reset(self):
+        self.step = 0
+
+    def risk_amount(self, state):
+        return self.unit(state) * (self.p("mult") ** self.step)
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.step += 1
+            if self.step >= int(self.p("steps")):
+                self.step = 0
+        elif r < 0:
+            self.step = 0
+
+
+class Sequence1326Manager(MoneyManager):
+    KEY, TITLE = "seq_1326", "دنباله‌ی ۱-۳-۲-۶"
+    DESC = ("چهار پله روی بردهای پیاپی. پله‌ی سوم عمداً از دومی کوچک‌تر است تا سود "
+            "قفل شود؛ از آن پله به بعد چرخه حتی با باخت هم سودده تمام می‌شود.")
+    SEQ = [1, 3, 2, 6]
+
+    def reset(self):
+        self.i = 0
+
+    def risk_amount(self, state):
+        return self.unit(state) * self.SEQ[self.i]
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.i = (self.i + 1) % len(self.SEQ)
+        elif r < 0:
+            self.i = 0
+
+
+class AntiFibonacciManager(MoneyManager):
+    KEY, TITLE = "anti_fibonacci", "فیبوناچی معکوس"
+    DESC = ("همان دنباله‌ی فیبوناچی، ولی روی بردها جلو می‌رود و با اولین باخت "
+            "مستقیم به خانه‌ی اول برمی‌گردد.")
+    SEQ = [1, 1, 2, 3, 5, 8, 13, 21]
+    PARAMS = [("maxi", "حداکثر گام", 2, 7, 4, 1, 0)]
+
+    def reset(self):
+        self.i = 0
+
+    def risk_amount(self, state):
+        return self.unit(state) * self.SEQ[min(self.i, len(self.SEQ) - 1)]
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.i = min(self.i + 1, int(self.p("maxi")))
+        elif r < 0:
+            self.i = 0
+
+
+class ReverseLabouchereManager(MoneyManager):
+    KEY, TITLE = "reverse_labouchere", "لابوشر معکوس"
+    DESC = ("خط اعداد با هر برد بلندتر و با هر باخت کوتاه‌تر می‌شود؛ یعنی رگه‌ی بد "
+            "خودش شرط‌ها را کوچک می‌کند — دقیقاً برعکس نسخه‌ی خطرناکِ اصلی.")
+    PARAMS = [("length", "طول خط اولیه", 2, 10, 4, 1, 0),
+              ("maxu", "سقف واحد", 2, 40, 12, 1, 0)]
+
+    def reset(self):
+        self.line = list(range(1, int(self.p("length")) + 1))
+
+    def _bet(self):
+        if not self.line:
+            self.reset()
+        return self.line[0] + self.line[-1] if len(self.line) > 1 else self.line[0]
+
+    def risk_amount(self, state):
+        return self.unit(state) * min(self._bet(), self.p("maxu"))
+
+    def update(self, state, r, pnl):
+        bet = min(self._bet(), self.p("maxu"))
+        if r > 0:
+            self.line.append(bet)
+        elif r < 0:
+            if len(self.line) <= 2:
+                self.reset()
+            else:
+                self.line = self.line[1:-1]
+
+
+class System31Manager(MoneyManager):
+    KEY, TITLE = "system31", "سیستم ۳۱ (بودجه‌ی بسته)"
+    DESC = ("دنباله‌ی کلاسیک ۱-۱-۱-۲-۲-۴-۴-۸-۸ که مجموعش دقیقاً ۳۱ واحد است. "
+            "کل چرخه داخل یک بودجه‌ی درصدی جا داده شده، پس بدترین حالت ممکن "
+            "همان بودجه است و نه یک ریال بیشتر.")
+    SEQ = [1, 1, 1, 2, 2, 4, 4, 8, 8]
+    PARAMS = [("budget", "بودجه‌ی هر چرخه (٪ حساب)", 1.0, 20.0, 6.0, 0.5, 2)]
+
+    def reset(self):
+        self.i = 0
+        self.anchor = None
+
+    def risk_amount(self, state):
+        if self.i == 0 or self.anchor is None:
+            self.anchor = state.equity
+        unit = self.anchor * self.p("budget") / 100.0 / 31.0
+        return unit * self.SEQ[min(self.i, len(self.SEQ) - 1)]
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.i = 0
+        elif r < 0:
+            self.i += 1
+            if self.i >= len(self.SEQ):
+                self.i = 0
+
+
+class BudgetedRecoveryManager(MoneyManager):
+    KEY, TITLE = "budget_recovery", "جبران بودجه‌دار ★"
+    DESC = ("اول تصمیم می‌گیری در یک چرخه‌ی بد چند درصد حساب را حاضری بدهی، بعد کل "
+            "نردبان جبران دقیقاً داخل همان بودجه چیده می‌شود. برعکس مارتینگل که اول "
+            "ضریب را می‌بندد و بعد می‌فهمد چقدر ضرر می‌دهد.")
+    PARAMS = [("budget", "بودجه‌ی هر چرخه (٪ حساب)", 0.5, 15.0, 4.0, 0.5, 2),
+              ("steps", "تعداد پله‌ی چرخه", 2, 8, 4, 1, 0),
+              ("mult", "ضریب پله", 1.1, 3.0, 1.5, 0.1, 2)]
+
+    def reset(self):
+        self.step = 0
+        self.anchor = None
+
+    def risk_amount(self, state):
+        if self.step == 0 or self.anchor is None:
+            self.anchor = state.equity          # بودجه در شروع چرخه قفل می‌شود
+        n = int(self.p("steps"))
+        m = self.p("mult")
+        budget = self.anchor * self.p("budget") / 100.0
+        if abs(m - 1.0) < 1e-6:
+            first = budget / n
+        else:
+            first = budget * (m - 1.0) / (m ** n - 1.0)
+        return first * (m ** min(self.step, n - 1))
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.step = 0
+            self.anchor = None
+        elif r < 0:
+            self.step += 1
+            if self.step >= int(self.p("steps")):
+                self.step = 0                   # چرخه تمام شد، ضرر پذیرفته شد
+                self.anchor = None
+
+
+class HouseMoneyLadderManager(MoneyManager):
+    KEY, TITLE = "house_money", "نردبان پول خانه ★"
+    DESC = ("فقط با سودی که همین رگه‌ی برد ساخته قمار می‌کنی. اگر رگه بشکند، حداکثر "
+            "همان چیزی را پس می‌دهی که خودِ رگه به تو داده بود؛ سرمایه‌ی اصلی دست‌نخورده می‌ماند.")
+    PARAMS = [("share", "سهم سود رگه در ریسک بعدی", 0.1, 1.0, 0.5, 0.05, 2),
+              ("cap", "سقف واحد", 1.5, 10.0, 4.0, 0.5, 1)]
+
+    def reset(self):
+        self.streak_profit = 0.0
+
+    def risk_amount(self, state):
+        base = self.unit(state)
+        extra = max(0.0, self.streak_profit) * self.p("share")
+        return min(base + extra, base * self.p("cap"))
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.streak_profit += pnl
+        elif r < 0:
+            self.streak_profit = 0.0
+
+
+class SqrtMartingaleManager(MoneyManager):
+    KEY, TITLE = "sqrt_martingale", "مارتینگل ریشه‌ای ★"
+    DESC = ("به‌جای رشد نمایی، ریسک با ریشه‌ی شماره‌ی پله بالا می‌رود: پله‌ی نهم در "
+            "مارتینگل ۲۵۶ برابر پایه است، اینجا حدود ۳ برابر. زنجیره‌ی باخت را از "
+            "فاجعه به یک خراش تبدیل می‌کند، در ازای جبران کندتر.")
+    PARAMS = [("power", "توان رشد", 0.3, 1.5, 0.5, 0.1, 2),
+              ("steps", "حداکثر پله", 2, 15, 6, 1, 0),
+              ("maxu", "سقف واحد", 1.5, 10.0, 3.0, 0.5, 1)]
+
+    def reset(self):
+        self.step = 0
+
+    def risk_amount(self, state):
+        factor = (1.0 + self.step) ** self.p("power")
+        return self.unit(state) * min(factor, self.p("maxu"))
+
+    def update(self, state, r, pnl):
+        if r > 0:
+            self.step = 0
+        elif r < 0:
+            self.step = min(self.step + 1, int(self.p("steps")))
+
+
+class TwoPocketManager(MoneyManager):
+    KEY, TITLE = "two_pocket", "دو جیب ★"
+    DESC = ("حساب به دو جیب تقسیم می‌شود: جیب اصلی که هرگز دست نمی‌خورد و جیب "
+            "ماجراجو که کل نردبان داخلش جا شده. سودش به جیب اصلی منتقل می‌شود و "
+            "اگر خالی شد، برنامه تا آخر با ریسک ثابت ادامه می‌دهد.")
+    PARAMS = [("satellite", "سهم جیب ماجراجو (٪ سرمایه)", 2.0, 50.0, 15.0, 1.0, 1),
+              ("steps", "تعداد پله‌ی نردبان", 2, 8, 5, 1, 0),
+              ("mult", "ضریب پله", 1.2, 3.0, 2.0, 0.1, 2)]
+
+    def reset(self):
+        self.sat = None
+        self.sat0 = 0.0
+        self.step = 0
+        self.dead = False
+
+    def risk_amount(self, state):
+        if self.sat is None:
+            self.sat0 = state.initial * self.p("satellite") / 100.0
+            self.sat = self.sat0
+        if self.dead or self.sat <= 0:
+            self.dead = True
+            return state.equity * self.cfg.base_risk_pct / 100.0
+        n = int(self.p("steps"))
+        m = self.p("mult")
+        if abs(m - 1.0) < 1e-6:
+            first = self.sat0 / n
+        else:
+            first = self.sat0 * (m - 1.0) / (m ** n - 1.0)
+        want = first * (m ** min(self.step, n - 1))
+        return max(0.0, min(want, self.sat))
+
+    def update(self, state, r, pnl):
+        if self.dead:
+            return
+        self.sat += pnl
+        if r > 0:
+            self.step = 0
+            if self.sat > self.sat0:      # سود مازاد به جیب اصلی منتقل می‌شود
+                self.sat = self.sat0
+        elif r < 0:
+            self.step += 1
+            if self.sat <= 0:
+                self.dead = True
+                self.step = 0
+            elif self.step >= int(self.p("steps")):
+                self.step = 0
+
+
+class CircuitAntiMartingaleManager(MoneyManager):
+    KEY, TITLE = "circuit_anti", "آنتی‌مارتینگل با فیوز ★"
+    DESC = ("روی بردها بزرگ می‌شود، ولی با چند باخت پیاپی یک فیوز می‌پرد و برای "
+            "چند معامله با ریسک نصف ادامه می‌دهی. همان قانونی که خیلی‌ها می‌خواهند "
+            "رعایت کنند و نمی‌توانند، اینجا خودکار است.")
+    PARAMS = [("mult", "ضریب رشد بعد از برد", 1.1, 3.0, 1.6, 0.1, 2),
+              ("steps", "حداکثر پله", 1, 8, 3, 1, 0),
+              ("brake", "چند باخت پیاپی فیوز را بزند", 2, 8, 3, 1, 0),
+              ("cool", "طول دوره‌ی خنک‌سازی", 1, 30, 6, 1, 0),
+              ("cool_risk", "ریسک دوره‌ی خنک‌سازی (٪ پایه)", 10.0, 100.0, 50.0, 5.0, 0)]
+
+    def reset(self):
+        self.step = 0
+        self.losses = 0
+        self.cooling = 0
+
+    def risk_amount(self, state):
+        base = self.unit(state)
+        if self.cooling > 0:
+            return base * self.p("cool_risk") / 100.0
+        return base * (self.p("mult") ** self.step)
+
+    def update(self, state, r, pnl):
+        if self.cooling > 0:
+            self.cooling -= 1
+            if r > 0:
+                self.losses = 0
+            return
+        if r > 0:
+            self.step = min(self.step + 1, int(self.p("steps")))
+            self.losses = 0
+        elif r < 0:
+            self.step = 0
+            self.losses += 1
+            if self.losses >= int(self.p("brake")):
+                self.cooling = int(self.p("cool"))
+                self.losses = 0
 
 
 class MMRegistry:
     """فهرست همه‌ی سیستم‌ها به ترتیب نمایش در منوی کشویی."""
 
-    CLASSES = [FixedFractionalManager, FixedAmountManager, FixedRatioManager,
-               MartingaleManager, AntiMartingaleManager, DAlembertManager,
-               AntiDAlembertManager, FibonacciManager, LabouchereManager,
-               OscarGrindManager, KellyManager, OptimalFManager,
-               EquityFilterManager, MilestoneManager, RatchetManager,
-               WithdrawManager]
+    # --- گروه پایه و سالم ---
+    CORE = [FixedFractionalManager, FixedAmountManager, FixedRatioManager]
+
+    # --- گروه ریاضی ---
+    MATH = [KellyManager, OptimalFManager]
+
+    # --- گروه ساختاری و رفتاری ---
+    STRUCTURAL = [EquityFilterManager, MilestoneManager, RatchetManager,
+                  WithdrawManager]
+
+    # --- گروه کازینویی مهارشده (ستاره‌دارها ابداعی‌اند) ---
+    SAFE_PROGRESSION = [BudgetedRecoveryManager, HouseMoneyLadderManager,
+                        SqrtMartingaleManager, TwoPocketManager,
+                        CircuitAntiMartingaleManager, ParoliManager,
+                        Sequence1326Manager, AntiFibonacciManager,
+                        ReverseLabouchereManager, System31Manager]
+
+    # --- گروه کازینویی خطرناک (برای عبرت) ---
+    RISKY_PROGRESSION = [MartingaleManager, AntiMartingaleManager,
+                         DAlembertManager, AntiDAlembertManager,
+                         FibonacciManager, LabouchereManager,
+                         OscarGrindManager]
+
+    CLASSES = CORE + SAFE_PROGRESSION + MATH + STRUCTURAL + RISKY_PROGRESSION
     BASELINE = FixedFractionalManager
 
     @classmethod
@@ -472,6 +780,7 @@ class MMRegistry:
             if klass.KEY == key:
                 return klass
         return cls.BASELINE
+
 
 
 # ===============================================================

@@ -1,0 +1,900 @@
+{
+ "fingerprint": "48677bcb869a1af3766f3b4cda8c69bc0f3aa66d",
+ "files": {
+  "backtestlab": "3e4234f5acf4",
+  "dashboard": "c92b8c6e1026",
+  "make_guide": "5901d94a036f",
+  "makeicon": "21e89ec65ba8",
+  "mc_ui_fix": "09e0dd95ab65",
+  "money_management": "dd96d707a22a",
+  "montecarlo": "b05c0e72f376",
+  "tablekit": "ea3c5024e944",
+  "theme": "5cda3389277d",
+  "user_guide": "7001fbf2dbed",
+  "__builder__": "2.0"
+ },
+ "structure": {
+  "backtestlab": {
+   "classes": {
+    "RLabel": [
+     "__init__",
+     "_css",
+     "restyle",
+     "setText"
+    ],
+    "SLineEdit": [
+     "__init__",
+     "_sync",
+     "setPlaceholderText"
+    ],
+    "STextEdit": [
+     "__init__",
+     "_sync"
+    ],
+    "SComboBox": [
+     "__init__",
+     "_sync",
+     "addItem",
+     "addItems"
+    ],
+    "PageHeader": [
+     "__init__"
+    ],
+    "Card": [
+     "__init__",
+     "add",
+     "add_layout"
+    ],
+    "FormGrid": [
+     "__init__",
+     "add",
+     "add_full"
+    ],
+    "NavItem": [
+     "__init__",
+     "enterEvent",
+     "leaveEvent",
+     "mousePressEvent",
+     "set_active"
+    ],
+    "BaseDialog": [
+     "__init__",
+     "buttons"
+    ],
+    "IconRenderer": [
+     "__init__",
+     "_vector",
+     "icon",
+     "pixmap"
+    ],
+    "Database": [
+     "__init__",
+     "_migrate",
+     "add_field",
+     "add_trade",
+     "create_strategy",
+     "delete_field",
+     "delete_strategy",
+     "delete_trade",
+     "fields",
+     "get_trade",
+     "packed_fields",
+     "strategies",
+     "trades",
+     "update_trade"
+    ],
+    "BrandWidget": [
+     "__init__"
+    ],
+    "StatCard": [
+     "__init__",
+     "set_value"
+    ],
+    "FilterRow": [
+     "__init__",
+     "_on_field",
+     "to_filter"
+    ],
+    "FilterBuilder": [
+     "__init__",
+     "_drop",
+     "_emit",
+     "_remove",
+     "_upd",
+     "add_row",
+     "clear_all",
+     "rebuild"
+    ],
+    "FieldEditorDialog": [
+     "__init__",
+     "_on_type",
+     "data"
+    ],
+    "TradeFormDialog": [
+     "__init__",
+     "_load",
+     "_set_value",
+     "_widget",
+     "get_data"
+    ],
+    "TradesPage": [
+     "__init__",
+     "_center_widget",
+     "_edit_current",
+     "_on_double_click",
+     "_on_filters",
+     "_on_strategy",
+     "_row_menu",
+     "_trade_id",
+     "add_trade",
+     "delete_trade",
+     "duplicate_trade",
+     "edit_trade",
+     "reload_strategies",
+     "reload_table"
+    ],
+    "StrategiesPage": [
+     "__init__",
+     "_on_select",
+     "add_field",
+     "delete_field",
+     "delete_strategy",
+     "new_strategy",
+     "reload_list"
+    ],
+    "SettingsPage": [
+     "__init__",
+     "open_guide",
+     "open_user_guide"
+    ],
+    "UIKit": [],
+    "MainWindow": [
+     "__init__",
+     "_changed",
+     "showEvent",
+     "switch"
+    ]
+   },
+   "functions": [
+    "ask_text",
+    "build_qss",
+    "cell",
+    "dark_titlebar",
+    "date_input",
+    "db_path",
+    "dir_of",
+    "fa_button",
+    "is_num",
+    "load_fonts",
+    "logo_pixmap",
+    "main",
+    "match",
+    "msg_confirm",
+    "msg_info",
+    "num_spin",
+    "qt_align",
+    "qt_dir",
+    "resource_path"
+   ]
+  },
+  "dashboard": {
+   "classes": {
+    "TradeStats": [
+     "__init__",
+     "_calculate",
+     "_reset",
+     "_sort_key",
+     "avg_loss",
+     "avg_rr",
+     "avg_win",
+     "expectancy",
+     "is_empty",
+     "profit_factor",
+     "win_rate"
+    ],
+    "PeriodAggregator": [
+     "__init__",
+     "_build",
+     "_key_label",
+     "comparison"
+    ],
+    "SummaryWriter": [
+     "_judge",
+     "_streak_note",
+     "write"
+    ],
+    "BaseChart": [
+     "__init__",
+     "color",
+     "draw",
+     "has_data",
+     "legend",
+     "paintEvent"
+    ],
+    "EquityCurveChart": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_points"
+    ],
+    "PeriodBarChart": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_buckets"
+    ],
+    "CompareChart": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_series"
+    ],
+    "StatCardsRow": [
+     "__init__",
+     "clear",
+     "set"
+    ],
+    "DashboardPage": [
+     "__init__",
+     "_build",
+     "_build_compare_tab",
+     "_build_curve_tab",
+     "_build_mm_tab",
+     "_build_period_tab",
+     "_fill",
+     "_period_text",
+     "_refresh_compare",
+     "_refresh_period",
+     "_show",
+     "_show_empty",
+     "refresh",
+     "reload_strategies"
+    ]
+   },
+   "functions": [
+    "parse_date",
+    "row_get",
+    "to_float"
+   ]
+  },
+  "make_guide": {
+   "classes": {
+    "FuncDoc": [
+     "__init__",
+     "dunder",
+     "private",
+     "summary",
+     "tag"
+    ],
+    "ClassDoc": [
+     "__init__",
+     "attr",
+     "full",
+     "is_widget",
+     "params_spec",
+     "summary"
+    ],
+    "ModuleDoc": [
+     "__init__",
+     "title_line"
+    ],
+    "PySourceParser": [
+     "_args",
+     "_assign",
+     "_class",
+     "_func",
+     "_import_names",
+     "_is_signal",
+     "_src",
+     "_value",
+     "parse"
+    ],
+    "Project": [
+     "__init__",
+     "files",
+     "fingerprint",
+     "scan",
+     "stats",
+     "structure"
+    ],
+    "ChangeLog": [
+     "__init__",
+     "_diff",
+     "empty"
+    ],
+    "Knowledge": [
+     "class_note",
+     "module",
+     "order_key"
+    ],
+    "MMGroups": [
+     "__init__",
+     "_names",
+     "of"
+    ],
+    "HtmlRenderer": [
+     "__init__",
+     "_constants_table",
+     "anchor",
+     "build",
+     "changes",
+     "class_card",
+     "concepts",
+     "dev",
+     "e",
+     "faq",
+     "fmt_num",
+     "hero",
+     "ideas",
+     "missing_section",
+     "module_section",
+     "ordered_modules",
+     "para",
+     "project_map",
+     "sidebar",
+     "tutorials"
+    ],
+    "PlainRenderer": [
+     "__init__",
+     "build"
+    ],
+    "MarkdownRenderer": [
+     "__init__",
+     "build"
+    ],
+    "PdfExporter": [
+     "save"
+    ],
+    "GuideBuilder": [
+     "__init__",
+     "_load_state",
+     "_save_state",
+     "build",
+     "log",
+     "needs_build"
+    ]
+   },
+   "functions": [
+    "autoupdate",
+    "build_guide",
+    "main",
+    "open_guide"
+   ]
+  },
+  "makeicon": {
+   "classes": {},
+   "functions": []
+  },
+  "mc_ui_fix": {
+   "classes": {
+    "_Flow": [
+     "__init__",
+     "_widgets",
+     "apply",
+     "eventFilter"
+    ],
+    "_FormFlow": [
+     "__init__",
+     "apply",
+     "capture",
+     "eventFilter"
+    ],
+    "_SplitFlow": [
+     "__init__",
+     "apply",
+     "eventFilter"
+    ],
+    "_SidebarFlow": [
+     "__init__",
+     "apply",
+     "eventFilter"
+    ],
+    "_Watcher": [
+     "__init__",
+     "eventFilter",
+     "poll",
+     "run",
+     "schedule",
+     "signature"
+    ]
+   },
+   "functions": [
+    "_alive",
+    "_box_items",
+    "_fix_atoms",
+    "_fix_layouts",
+    "_fix_sidebar",
+    "_fix_splitters",
+    "_fix_stacks",
+    "_fix_tables",
+    "_fix_tabs",
+    "_fix_window",
+    "_is_field",
+    "_is_tool",
+    "_iter_layouts",
+    "_log",
+    "_looks_panel",
+    "_needs_scroll",
+    "_to_grid",
+    "_wrap",
+    "apply_to",
+    "install",
+    "refresh",
+    "scale"
+   ]
+  },
+  "money_management": {
+   "classes": {
+    "RSeriesBuilder": [
+     "__init__",
+     "_avg_loss",
+     "_pick_mode",
+     "_risk_of",
+     "build"
+    ],
+    "MMConfig": [
+     "__init__"
+    ],
+    "SimState": [
+     "__init__",
+     "total",
+     "withdraw"
+    ],
+    "SimResult": [
+     "__init__",
+     "return_pct",
+     "status"
+    ],
+    "MoneyManager": [
+     "__init__",
+     "p",
+     "reset",
+     "risk_amount",
+     "unit",
+     "update"
+    ],
+    "FixedAmountManager": [
+     "risk_amount"
+    ],
+    "FixedFractionalManager": [],
+    "FixedRatioManager": [
+     "risk_amount"
+    ],
+    "MartingaleManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "AntiMartingaleManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "DAlembertManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "AntiDAlembertManager": [
+     "update"
+    ],
+    "FibonacciManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "LabouchereManager": [
+     "_bet",
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "OscarGrindManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "KellyManager": [
+     "risk_amount"
+    ],
+    "OptimalFManager": [
+     "risk_amount"
+    ],
+    "EquityFilterManager": [
+     "risk_amount"
+    ],
+    "MilestoneManager": [
+     "risk_amount"
+    ],
+    "RatchetManager": [
+     "risk_amount"
+    ],
+    "WithdrawManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "ParoliManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "Sequence1326Manager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "AntiFibonacciManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "ReverseLabouchereManager": [
+     "_bet",
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "System31Manager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "BudgetedRecoveryManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "HouseMoneyLadderManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "SqrtMartingaleManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "TwoPocketManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "CircuitAntiMartingaleManager": [
+     "reset",
+     "risk_amount",
+     "update"
+    ],
+    "MMRegistry": [
+     "by_key"
+    ],
+    "MoneyManagementEngine": [
+     "__init__",
+     "run"
+    ],
+    "MoneyManagementPanel": [
+     "__init__",
+     "_build",
+     "_config",
+     "_fill_table",
+     "_label",
+     "_on_system_changed",
+     "_rebuild_params",
+     "_recalc",
+     "_spin",
+     "_verdict",
+     "recalc",
+     "set_rows"
+    ]
+   },
+   "functions": [
+    "QColorSafe"
+   ]
+  },
+  "montecarlo": {
+   "classes": {
+    "HostBridge": [
+     "_install_icon",
+     "_install_qss",
+     "install",
+     "module"
+    ],
+    "MCMath": [
+     "cvar",
+     "downside_dev",
+     "histogram",
+     "mean",
+     "percentile",
+     "rank_of",
+     "resample",
+     "stdev"
+    ],
+    "MCConfig": [
+     "__init__",
+     "to_dict"
+    ],
+    "MCMetrics": [
+     "__init__",
+     "_applied",
+     "compute"
+    ],
+    "MCResult": [
+     "__init__",
+     "band",
+     "confidence_table",
+     "ruin_stats",
+     "ruin_table",
+     "sample_curves",
+     "summary",
+     "underwater",
+     "values_of"
+    ],
+    "MonteCarloEngine": [
+     "__init__",
+     "_base_sequence",
+     "_make_sequence",
+     "run"
+    ],
+    "MCRiskOptimizer": [
+     "__init__",
+     "kelly",
+     "run",
+     "to_r_multiples"
+    ],
+    "MCSignificance": [
+     "__init__",
+     "_verdict",
+     "run"
+    ],
+    "MCPredictor": [
+     "__init__",
+     "run",
+     "walk_forward"
+    ],
+    "MCDataSource": [
+     "__init__",
+     "fetch"
+    ],
+    "MonteCarloWorker": [
+     "__init__",
+     "run",
+     "stop"
+    ],
+    "FuncWorker": [
+     "__init__",
+     "run",
+     "stop"
+    ],
+    "BaseChart": [
+     "__init__",
+     "draw",
+     "has_data",
+     "legend",
+     "paintEvent"
+    ],
+    "MCChart": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_result"
+    ],
+    "MCHistogram": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_data"
+    ],
+    "MCUnderwater": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_result"
+    ],
+    "MCRiskCurve": [
+     "__init__",
+     "draw",
+     "has_data",
+     "set_rows"
+    ],
+    "MCReport": [
+     "html",
+     "interpretation"
+    ],
+    "MonteCarloPage": [
+     "__init__",
+     "_build_cards",
+     "_build_dist_tab",
+     "_build_header",
+     "_build_interp_tab",
+     "_build_optimizer_tab",
+     "_build_predict_tab",
+     "_build_settings",
+     "_build_signif_tab",
+     "_build_tabs",
+     "_busy",
+     "_fetch",
+     "_fill_confidence",
+     "_fill_interpretation",
+     "_fill_ruin",
+     "_make_table",
+     "_on_failed",
+     "_on_finished",
+     "_on_method",
+     "_on_mode",
+     "_on_optimizer",
+     "_on_significance",
+     "_on_sizing",
+     "_read_config",
+     "_refresh_dist",
+     "_seed_value",
+     "_values_or_warn",
+     "_wrap",
+     "export_csv",
+     "export_html",
+     "load_preset",
+     "reload_strategies",
+     "run_optimizer",
+     "run_predict",
+     "run_significance",
+     "run_walk_forward",
+     "save_preset",
+     "start_run",
+     "stop_run"
+    ]
+   },
+   "functions": []
+  },
+  "tablekit": {
+   "classes": {
+    "TableStore": [
+     "_flush",
+     "data",
+     "get",
+     "path",
+     "remove",
+     "set"
+    ],
+    "ExcelTable": [
+     "__init__",
+     "_auto_layout",
+     "_col_hint",
+     "_header_menu",
+     "_on_section_resized",
+     "_restore",
+     "_row_menu",
+     "_schedule_auto",
+     "_set_width",
+     "_setup",
+     "attach",
+     "autofit",
+     "autofit_all",
+     "autofit_rows",
+     "copy_selection",
+     "equal_widths",
+     "eventFilter",
+     "fit_to_width",
+     "reset",
+     "save",
+     "set_row_height"
+    ],
+    "FitGuard": [
+     "__init__",
+     "_apply_modes",
+     "_chain",
+     "_on_resized",
+     "_spread",
+     "_visible",
+     "eventFilter",
+     "fit",
+     "measure",
+     "refresh"
+    ]
+   },
+   "functions": [
+    "fit_columns",
+    "make_excel"
+   ]
+  },
+  "theme": {
+   "classes": {
+    "ColorTools": [
+     "shade",
+     "with_alpha"
+    ],
+    "ThemePalette": [
+     "__getitem__",
+     "__init__",
+     "qpalette"
+    ],
+    "ThemeRegistry": [
+     "all",
+     "get",
+     "other"
+    ],
+    "RoleMap": [
+     "role_of"
+    ],
+    "ThemeQSS": [
+     "build"
+    ],
+    "ThemeIcon": [
+     "pixmap"
+    ],
+    "ThemeApplier": [
+     "__init__",
+     "_icon",
+     "_table",
+     "_titlebar",
+     "_walk",
+     "apply"
+    ],
+    "ThemeSettings": [
+     "__init__",
+     "get",
+     "load",
+     "set"
+    ],
+    "ThemeController": [
+     "__init__",
+     "apply",
+     "attach_window",
+     "instance",
+     "is_dark",
+     "key",
+     "palette",
+     "start",
+     "toggle"
+    ],
+    "ThemeButton": [
+     "__init__",
+     "theme_refresh"
+    ],
+    "HostBridge": [
+     "_patch_brand",
+     "_patch_fa_button",
+     "_patch_navitem",
+     "_patch_rlabel",
+     "_patch_titlebar",
+     "install",
+     "module"
+    ]
+   },
+   "functions": []
+  },
+  "user_guide": {
+   "classes": {
+    "Page": [
+     "__init__",
+     "labels",
+     "nice_title",
+     "useful"
+    ]
+   },
+   "functions": [
+    "_is_page",
+    "_s",
+    "_slist",
+    "app_meta",
+    "auto_steps",
+    "autoupdate",
+    "build",
+    "chips",
+    "collect_pages",
+    "diff",
+    "e",
+    "fa",
+    "fingerprint",
+    "hand_for",
+    "li",
+    "load_state",
+    "open_guide",
+    "render",
+    "scan_class",
+    "source_files",
+    "uniq"
+   ]
+  }
+ },
+ "builder": "2.0",
+ "built_at": "2026-08-07T02:56:51"
+}

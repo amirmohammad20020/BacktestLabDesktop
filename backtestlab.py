@@ -1695,7 +1695,107 @@ class SettingsPage(QWidget):
         c2.add(RLabel("Persian text is right-aligned, English is left-aligned.",
                       size=12, color=C["text_muted"], force="ltr"))
         v.addWidget(c2)
+
+        c3 = Card("راهنمای برنامه")
+        c3.add(RLabel("راهنمای کامل مستقیماً از روی کد ساخته می‌شود و با هر "
+                      "تغییر برنامه خودکار به‌روز می‌شود.", size=12,
+                      color=C["text_muted"], force="rtl"))
+
+        row = QWidget()
+        row.setLayoutDirection(Qt.LeftToRight)
+        rh = QHBoxLayout(row)
+        rh.setContentsMargins(0, 0, 0, 0)
+        rh.setSpacing(8)
+        rebuild_btn = fa_button("ساخت دوباره‌ی راهنما", kind="GhostButton")
+        rebuild_btn.clicked.connect(lambda _=False: self.open_guide(True))
+        open_btn = fa_button("باز کردن راهنمای کامل", kind="GhostButton")
+        open_btn.clicked.connect(lambda _=False: self.open_guide(False))
+        usage_btn = fa_button("استفاده از نرم‌افزار", kind="PrimaryButton")
+        usage_btn.clicked.connect(lambda _=False: self.open_user_guide(False))
+        rh.addWidget(usage_btn)
+        rh.addWidget(open_btn)
+        rh.addWidget(rebuild_btn)
+
+        rh.addStretch(1)
+        c3.add(row)
+
+        self.guide_status = RLabel("هنوز باز نشده است.", size=11,
+                                   color=C["text_muted"], force="rtl")
+        c3.add(self.guide_status)
+        v.addWidget(c3)
+
         v.addStretch(1)
+
+    def open_guide(self, force=False):
+        """راهنما را (در صورت نیاز) می‌سازد و باز می‌کند و خطاها را نشان می‌دهد."""
+        import traceback
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+
+        self.guide_status.setText("در حال ساختن راهنما… چند ثانیه صبر کن.")
+        QApplication.processEvents()
+
+        try:
+            import make_guide
+            path = Path(make_guide.build_guide(
+                force=force, make_pdf=False, quiet=True))
+        except Exception as ex:
+            traceback.print_exc()
+            self.guide_status.setText("ساخت راهنما با خطا متوقف شد.")
+            msg_info(self, "ساخت راهنما ممکن نشد",
+                     "هنگام ساختن فایل راهنما خطایی رخ داد:\n\n"
+                     f"{type(ex).__name__}: {ex}")
+            return
+
+        if not path.exists():
+            self.guide_status.setText("فایل راهنما ساخته نشد.")
+            msg_info(self, "فایل راهنما پیدا نشد",
+                     f"انتظار می‌رفت این فایل ساخته شود ولی وجود ندارد:\n{path}")
+            return
+
+        self.guide_status.setText("فایل راهنما: " + str(path))
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))):
+            try:
+                import webbrowser
+                webbrowser.open(path.as_uri())
+            except Exception as ex:
+                msg_info(self, "باز کردن مرورگر ممکن نشد",
+                         f"فایل ساخته شد ولی باز نشد. خودت بازش کن:\n{path}"
+                         f"\n\n{ex}")
+    def open_user_guide(self, force=False):
+        """راهنمای کاربری (آموزش کار با برنامه) را می‌سازد و باز می‌کند."""
+        import traceback
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+
+        self.guide_status.setText("در حال آماده‌سازی راهنمای استفاده… چند ثانیه صبر کن.")
+        QApplication.processEvents()
+
+        try:
+            import user_guide
+            path = Path(user_guide.build(force=force, quiet=True))
+        except Exception as ex:
+            traceback.print_exc()
+            self.guide_status.setText("ساخت راهنمای استفاده با خطا متوقف شد.")
+            msg_info(self, "راهنمای استفاده ساخته نشد",
+                     "هنگام آماده‌سازی راهنما خطایی رخ داد:\n\n"
+                     f"{type(ex).__name__}: {ex}")
+            return
+
+        if not path.exists():
+            msg_info(self, "فایل پیدا نشد",
+                     f"انتظار می‌رفت این فایل ساخته شود ولی وجود ندارد:\n{path}")
+            return
+
+        self.guide_status.setText("راهنمای استفاده: " + str(path))
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))):
+            try:
+                import webbrowser
+                webbrowser.open(path.as_uri())
+            except Exception as ex:
+                msg_info(self, "باز کردن مرورگر ممکن نشد",
+                         f"فایل ساخته شد ولی باز نشد. خودت بازش کن:\n{path}\n\n{ex}")
+
 
 import tablekit
 import theme
@@ -1791,6 +1891,9 @@ class MainWindow(QMainWindow):
         self.switch(0)
         self.theme_ctrl = theme.ThemeController.instance()
         self.theme_ctrl.attach_window(self)
+        from PySide6.QtGui import QShortcut, QKeySequence
+        QShortcut(QKeySequence("F1"), self,
+                  activated=lambda: __import__("user_guide").open_guide())
 
 
     def switch(self, idx):
@@ -1845,6 +1948,13 @@ def main():
 
     win = MainWindow(IconRenderer(icon_fam))
     win.show()
+    import mc_ui_fix; mc_ui_fix.install()
+    try:
+        import make_guide
+        make_guide.autoupdate()      # پس‌زمینه، بی‌صدا، بدون کندکردن اجرا
+    except Exception:
+        pass
+    sys.exit(app.exec())
     import mc_ui_fix; mc_ui_fix.install()
     sys.exit(app.exec())
 
