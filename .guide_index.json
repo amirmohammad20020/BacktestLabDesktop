@@ -1,15 +1,16 @@
 {
- "fingerprint": "48677bcb869a1af3766f3b4cda8c69bc0f3aa66d",
+ "fingerprint": "d73617b13cea6207a8ce43145ac944a3d586f5b6",
  "files": {
-  "backtestlab": "3e4234f5acf4",
+  "backtestlab": "320d215e4167",
   "dashboard": "c92b8c6e1026",
   "make_guide": "5901d94a036f",
   "makeicon": "21e89ec65ba8",
   "mc_ui_fix": "09e0dd95ab65",
   "money_management": "dd96d707a22a",
   "montecarlo": "b05c0e72f376",
-  "tablekit": "ea3c5024e944",
+  "tablekit": "5ebeee9358ad",
   "theme": "5cda3389277d",
+  "trades": "c2eed47d0c43",
   "user_guide": "7001fbf2dbed",
   "__builder__": "2.0"
  },
@@ -116,22 +117,6 @@
      "_set_value",
      "_widget",
      "get_data"
-    ],
-    "TradesPage": [
-     "__init__",
-     "_center_widget",
-     "_edit_current",
-     "_on_double_click",
-     "_on_filters",
-     "_on_strategy",
-     "_row_menu",
-     "_trade_id",
-     "add_trade",
-     "delete_trade",
-     "duplicate_trade",
-     "edit_trade",
-     "reload_strategies",
-     "reload_table"
     ],
     "StrategiesPage": [
      "__init__",
@@ -745,55 +730,8 @@
    "functions": []
   },
   "tablekit": {
-   "classes": {
-    "TableStore": [
-     "_flush",
-     "data",
-     "get",
-     "path",
-     "remove",
-     "set"
-    ],
-    "ExcelTable": [
-     "__init__",
-     "_auto_layout",
-     "_col_hint",
-     "_header_menu",
-     "_on_section_resized",
-     "_restore",
-     "_row_menu",
-     "_schedule_auto",
-     "_set_width",
-     "_setup",
-     "attach",
-     "autofit",
-     "autofit_all",
-     "autofit_rows",
-     "copy_selection",
-     "equal_widths",
-     "eventFilter",
-     "fit_to_width",
-     "reset",
-     "save",
-     "set_row_height"
-    ],
-    "FitGuard": [
-     "__init__",
-     "_apply_modes",
-     "_chain",
-     "_on_resized",
-     "_spread",
-     "_visible",
-     "eventFilter",
-     "fit",
-     "measure",
-     "refresh"
-    ]
-   },
-   "functions": [
-    "fit_columns",
-    "make_excel"
-   ]
+   "classes": {},
+   "functions": []
   },
   "theme": {
    "classes": {
@@ -861,6 +799,74 @@
    },
    "functions": []
   },
+  "trades": {
+   "classes": {
+    "TableStore": [
+     "_flush",
+     "data",
+     "get",
+     "path",
+     "remove",
+     "set"
+    ],
+    "ExcelTable": [
+     "__init__",
+     "_auto_layout",
+     "_col_hint",
+     "_header_menu",
+     "_on_section_resized",
+     "_restore",
+     "_row_menu",
+     "_schedule_auto",
+     "_set_width",
+     "_setup",
+     "attach",
+     "autofit",
+     "autofit_all",
+     "autofit_rows",
+     "copy_selection",
+     "equal_widths",
+     "eventFilter",
+     "fit_to_width",
+     "reset",
+     "save",
+     "set_row_height"
+    ],
+    "FitGuard": [
+     "__init__",
+     "_apply_modes",
+     "_chain",
+     "_on_resized",
+     "_spread",
+     "_visible",
+     "eventFilter",
+     "fit",
+     "measure",
+     "refresh"
+    ],
+    "TradesPage": [
+     "__init__",
+     "_center_widget",
+     "_edit_current",
+     "_on_double_click",
+     "_on_filters",
+     "_on_strategy",
+     "_row_menu",
+     "_trade_id",
+     "add_trade",
+     "delete_trade",
+     "duplicate_trade",
+     "edit_trade",
+     "reload_strategies",
+     "reload_table"
+    ]
+   },
+   "functions": [
+    "_bridge",
+    "fit_columns",
+    "make_excel"
+   ]
+  },
   "user_guide": {
    "classes": {
     "Page": [
@@ -896,5 +902,5 @@
   }
  },
  "builder": "2.0",
- "built_at": "2026-08-07T02:56:51"
+ "built_at": "2026-08-07T04:00:58"
 }
